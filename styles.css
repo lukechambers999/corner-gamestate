@@ -65,3 +65,16 @@ table {
   color: #0b0b0b;
   margin: 1.2rem 0 0;
 }
+
+.table-wrap table {
+  width: auto;
+  min-width: 60%;
+}
+
+.table-wrap table td {
+  white-space: nowrap;
+}
+
+.table-wrap table th {
+  vertical-align: bottom;
+}
