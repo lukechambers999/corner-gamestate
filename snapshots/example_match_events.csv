@@ -1,0 +1,16 @@
+Minute,Team,Event,home_goals,away_goals,gamestate
+5,Everton,Corner,0,0,0
+11,Everton,Goal,1,0,1
+16,Liverpool,Goal,1,1,0
+27,Liverpool,Yellow Card,1,1,0
+35,Everton,Yellow Card,1,1,0
+37,Everton,Yellow Card,1,1,0
+38,Liverpool,Corner,1,1,0
+47,Liverpool,Yellow Card,1,1,0
+48,Everton,Yellow Card,1,1,0
+52,Liverpool,Corner,1,1,0
+63,Liverpool,Yellow Card,1,1,0
+67,Everton,Corner,1,1,0
+73,Liverpool,Goal,1,2,2
+89,Liverpool,Corner,1,2,2
+98,Everton,Goal,2,2,0

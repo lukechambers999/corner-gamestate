@@ -1,0 +1,74 @@
+---
+title: "Methodology"
+subtitle: "Definitions, data handling and backtest design"
+---
+
+## Definitions
+
+**Game state.** The scoreline from a team's point of view at the moment of an
+event: *leading*, *level* or *trailing*. Minutes in each state are measured
+from the minutes goals were scored. Match length is taken as the later of 97
+minutes and the last recorded event.
+
+**Supremacy.** The expected goal difference (home minus away) implied by
+Pinnacle's pre-match Asian handicap and goal lines. Expected goals and supremacy are
+solved together from the two lines with a root-finder. *Team supremacy* is
+that value from the team's own side (flipped for away teams).
+
+**Repeater.** A corner by the same team, in the same half, within one minute
+of that team's previous corner. Repeaters are given a value of 0.
+
+**Adjusted corner value.** For a corner won by side *s* (home/away) in state
+*g* at team supremacy *x*:
+
+$$
+\text{value} = \frac{\bar r_s}{\alpha_{s,g} + \beta_{s,g}\,x}
+$$
+
+where $\bar r_s$ is the league's average corner rate for side *s*, and
+$(\alpha, \beta)$ come from a line fitted to corners-per-minute across 30
+supremacy buckets for that league, side and state. In the full model the fit
+is weighted by minutes in each bucket, and closed-doors COVID matches are
+excluded from fitting.
+
+## Ratings and prediction
+
+- Each team has an **attack** rating (corners won) and a **defence** rating
+  (corners conceded): rolling means over its last *N* matches (12, 15, 19, 25 or 30),
+  using only matches played before the fixture being predicted.
+- Four metrics are compared: raw counts, raw without repeaters (nr),
+  adjusted values (adj), and adjusted without repeaters (adj_nr).
+- Home corners are predicted with OLS on the home attack rating, the away defence rating
+  and match supremacy. Away corners are predicted the same way, the other way round.
+- Promoted and relegated teams keep their ratings across divisions. Supremacy
+  in the new league's fixtures accounts for the change in opposition.
+
+## Betting backtest
+
+- **Test period:** 2024/25 and 2025/26. The OLS model is fitted only on earlier
+  seasons, and predictions are rescaled to the test period's league corner level.
+- **Market:** Pinnacle Asian corner handicap. Its implied *corner supremacy* is
+  compared with the model's predicted home-minus-away corners.
+- **Selection:** a 1-unit bet on the side the model prefers when the two
+  differ by 0.5 corners or more (a threshold sweep is shown in the analysis).
+- **Settlement:** actual raw corners at Pinnacle's quoted odds, including
+  quarter-line half-win and half-loss handling and pushes on whole lines.
+- **Totals:** corner over/under was backtested with the same set-up and lost
+  money in every configuration. It's no longer part of the live model.
+
+## Data caveats
+
+- Match and half lengths aren't in the source data, so minutes in each state are estimates.
+- Some lower-league clubs appear under several spellings across seasons,
+  which splits their rolling windows. This hasn't been fixed at source yet.
+- Colombia Primera A/B and England League Two are excluded until they are
+  given league/tier context.
+- The number of matches with odds available varies by league, and so does the ROI.
+  Per-league results are noisy, and the combined figures are the ones to rely on.
+
+## Code
+
+The processing code for the original study is in the
+[`code/`](https://github.com/lukechambers999/corner-gamestate/tree/main/code)
+folder of this site's repository. The small data snapshots behind every chart and table are in
+[`snapshots/`](https://github.com/lukechambers999/corner-gamestate/tree/main/snapshots).

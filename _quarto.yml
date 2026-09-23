@@ -1,0 +1,40 @@
+project:
+  type: website
+  output-dir: _site
+  render:
+    - index.qmd
+    - methodology.qmd
+
+website:
+  title: "Corners & Game State"
+  site-url: https://lukechambers999.github.io/corner-gamestate/
+  repo-url: https://github.com/lukechambers999/corner-gamestate
+  navbar:
+    left:
+      - href: index.qmd
+        text: Analysis
+      - href: methodology.qmd
+        text: Methodology
+    right:
+      - icon: github
+        href: https://github.com/lukechambers999/corner-gamestate
+        aria-label: Code on GitHub
+
+format:
+  html:
+    theme: cosmo
+    css: styles.css
+    toc: true
+    toc-location: right
+    toc-depth: 2
+    number-sections: false
+    smooth-scroll: true
+    embed-resources: false
+    fig-responsive: true
+    html-math-method: katex
+
+execute:
+  echo: false
+  warning: false
+  message: false
+  freeze: auto
