@@ -33,6 +33,8 @@ _sh = _sh[~_sh["League"].isin(EXCLUDED)].pivot(index="League", columns="home_mat
 med_spread = (_sh["trailing"] - _sh["leading"]).median()
 ```
 
+## 1. Introduction
+
 ::: {.lede}
 Corner betting markets rate teams on how many corners they win and concede. But
 the number of corners a team takes depends a lot on the scoreline and on how
@@ -75,22 +77,113 @@ values, and tests them against Pinnacle's corner prices.
   `{python} n_bets_lo`–`{python} n_bets_hi` bets each). They show **no edge in
   corner totals**, which lost money in every configuration.
 
-## 1. The data
+## 2. The data
 
-Event data (goals, corners and cards, with the minute of each) is scraped from
-totalcorner.com, along with Pinnacle's pre-match Asian handicap and goal lines.
-From those two lines I back out each match's expected goals and
-**supremacy** (the expected goal difference), which gives a market-implied
-measure of how strong each team is going in.
+Two scrapers feed the model. Each lives in its own repository and runs
+automatically every day on GitHub Actions. The raw output is archived on Google
+Drive, and the processing stages read from there.
 
-The original study covered seven top-flight European leagues from 2014–2025. The
-production model now covers `{python} n_leagues` leagues across 1st and 2nd
-tiers. The league comparison in section 2, the league explorer in section 5 and
-sections 7–8 use the full model. The worked examples (Premier League, La Liga and
-the case study) use the original seven-league data.
+### totalcorner.com: match events
 
-Here is one match as raw events, with the running score and game state added
-(0 = level, 1 = home leading, 2 = away leading):
+The first scraper collects every finished match in `{python} n_leagues` leagues
+from totalcorner.com. Each match has:
+
+- **an event timeline:** every goal, corner and card, with the minute it happened
+- **full-time match stats:** corners, shots on and off target, attacks, dangerous
+  attacks and possession for each side
+- **pre-match betting lines** shown on the match page: the Asian handicap, goal
+  line and corner line, with their odds
+
+The site sits behind Cloudflare checks, so pages are fetched through a proxy
+service. Results are stored in a local database and exported as one CSV per
+league. The same scraper also collects upcoming fixtures for the live model.
+
+A sample of the raw output (one row per event) for Aston Villa 2–0 West Ham on
+22 March 2026. It shows 10 of the 34 columns:
+
+```{python}
+tc = load("sample_totalcorner_events.csv", dtype=str)
+tc_view = tc[["Date", "Home", "Away", "Team", "Minute", "Event",
+              "Home.Corners", "Away.Corners", "AH.Line", "Goal.Line"]].head(10)
+table(tc_view)
+```
+
+**How it's used.** The timeline gives the scoreline at every minute of every
+match. From it we can work out how long each team spent leading, level and
+trailing, and which game state each corner was won in. The pre-match handicap
+and goal lines are converted into each match's expected goals and
+**supremacy** (the expected goal difference), a market-implied measure of how
+strong each side is going in. The corner counts are what the model predicts.
+
+**Why it's useful.** Most free football data gives only match totals, such as
+"6 corners each". That can't tell you whether a team's corners came while
+chasing a game or while protecting a lead. totalcorner.com's minute-by-minute
+timeline is what makes the game-state adjustment possible, and its coverage of
+second-tier leagues means promoted and relegated teams can be tracked across
+divisions.
+
+### Pinnacle: corner market prices
+
+```{python}
+pc = load("pinnacle_coverage.csv").iloc[0]
+pin_first = pd.to_datetime(pc["first"]).strftime("%B %Y")
+pin_last = pd.to_datetime(pc["last"]).strftime("%B %Y")
+pin_n = f"{pc['matches']:,}"
+```
+
+The second scraper visits Pinnacle once a day and records prices for every
+fixture in the next seven days: match result, Asian handicap, goal line,
+and the two corner markets (**corner handicap** and **corner totals**).
+A processing step then removes Pinnacle's margin from each pair of odds and
+fits a Poisson distribution (totals) and a Skellam distribution (handicap)
+to find the market's fair **expected total corners** and **expected corner
+supremacy** (home minus away) for each match.
+
+A sample of the processed output for one Premier League weekend
+(7–8 February 2026):
+
+```{python}
+pin = load("sample_pinnacle_corners.csv")
+pin["Date"] = pd.to_datetime(pin["Date"]).dt.strftime("%d %b")
+pin_view = pin[["Date", "Home", "Away", "Corner Handicap", "Home Handicap Corners Odds",
+                "Away Handicap Corners Odds", "Asian Corners Line", "Asian Corners O Odds",
+                "Asian Corners U Odds", "corner_supremacy", "corner_total"]]
+pin_view.columns = ["Date", "Home", "Away", "Handicap line", "Home odds", "Away odds",
+                    "Totals line", "Over odds", "Under odds", "Fair supremacy", "Fair total"]
+table(pin_view, floatfmt=".2f")
+```
+
+**How it's used.** Pinnacle's fair corner supremacy is the benchmark the
+model has to beat. In the backtest, the model's predicted supremacy is compared
+with Pinnacle's for each match. When the two disagree by enough, a bet is placed
+at Pinnacle's quoted odds and settled on the actual corners. In the live model, the
+same comparison flags value bets on upcoming fixtures.
+
+**Why it's useful.** Pinnacle is widely regarded as the sharpest bookmaker.
+It runs low margins, accepts large stakes and is known for not restricting
+winning customers, so its prices are the best public estimate of the "true" market view. A
+model that beats Pinnacle has found a real edge rather than just a soft
+bookmaker. The archive covers `{python} pin_n` matches from `{python} pin_first` to
+`{python} pin_last`. Prices are recorded at the time of the daily scrape, so
+they aren't necessarily closing prices.
+
+Team and league names are spelled differently on the two sites, so a
+name-mapping table joins them.
+
+## 3. Data processing
+
+The raw event data goes through three processing steps before any analysis:
+working out the game state at every event, adding up the minutes and corners
+each team had in each state, and flagging repeater corners.
+
+### Identifying game state at each match event
+
+Each match's events are processed in time order, keeping a running count of
+goals for each side. After every event the score gives the game state:
+0 = level, 1 = home leading, 2 = away leading. Recording where the state *changes*
+marks the start and end of each spell of play at a given scoreline.
+
+Everton v Liverpool, 12 February 2025, with the running score and state added:
 
 ```{python}
 ev = load("example_match_events.csv")
@@ -98,18 +191,93 @@ ev.columns = ["Minute", "Team", "Event", "Home goals", "Away goals", "Game state
 table(ev, floatfmt=".0f")
 ```
 
-From the state changes we can work out how long each team spent in each state,
-and which state each corner was won in:
+```{python}
+code_link("code/gamestate.py#L21-L35", "Identifying game state: add_gamestate()")
+```
+
+### Minutes and corners in each game state
+
+The length of each spell is the gap between one state change and the next. The
+opening spell runs from kick-off to the first goal. The final spell runs to full
+time, taken as the later of 97 minutes and the last recorded event, because the
+source doesn't record stoppage time. Each spell's minutes are credited to the
+right state for each team, so a home lead counts as *leading* minutes for the
+home side and *trailing* minutes for the away side. Every corner is then counted
+under the game state it was won in, from the corner-taking team's point of view.
+
+Two checks remove corrupted matches: the minutes in each state must add up to the
+match length, and the corners in each state must add up to the scraped
+full-time total.
+
+The result is one row per team per match. Three Premier League examples:
 
 ```{python}
-table(load("example_match_minutes.csv"), floatfmt=".0f")
+ts = load("team_state_sample.csv")
+ts["Opponent"] = ts["Away"].where(ts["Team"] == ts["Home"], ts["Home"])
+ts_view = ts[["Team", "Opponent", "teamleadingmins", "teamdrawingmins", "teamlosingmins",
+              "team_leading_corners", "team_drawing_corners", "team_losing_corners"]]
+ts_view.columns = ["Team", "Opponent", "Mins leading", "Mins level", "Mins trailing",
+                   "Corners leading", "Corners level", "Corners trailing"]
+table(ts_view, floatfmt=".0f")
+```
+
+Man City led Ipswich for 83 minutes and won all 10 of their corners in that time.
+Ipswich trailed for the same 83 minutes and won only one. The raw count of
+10 corners to 1 says a lot less about each team's underlying corner strength
+than it seems to. The analysis in section 4 corrects for exactly this.
+
+```{python}
+code_link("code/gamestate.py#L38-L82", "Minutes in each state: add_gamestate_minutes()")
 ```
 
 ```{python}
-code_link("code/gamestate.py", "Game-state processing")
+code_link("code/gamestate.py#L85-L110", "Corners in each state: add_gamestate_corners()")
 ```
 
-## 2. Game state drives corner share
+### Identifying repeater corners
+
+```{python}
+rx = load("repeater_example.csv")
+villa = rx[rx["Team"] == "Aston Villa"]
+n_villa, n_villa_rep = len(villa), int(villa["Repeater"].sum())
+```
+
+A **repeater** is a corner that comes straight after another corner by the same
+team. Typically the first corner is cleared back behind by a defender. Repeaters
+matter because they aren't independent events: they depend on the corner before
+them. A team that has a spell of pressure can pick up three or four corners in a
+minute, which inflates its count without saying much more about its
+ability to win corners. Over a short run of games, a few of these spells can
+skew a team's rating.
+
+With minute-level event data they're simple to find. A corner is flagged as a
+repeater if the previous event in the match was also a corner, taken by the same
+team, in the same half, and no more than one minute earlier.
+
+All the corners from Aston Villa v Ipswich, 15 February 2025. Villa won
+`{python} n_villa` corners, and `{python} n_villa_rep` of them were repeaters:
+
+```{python}
+rx_view = rx[["Minute", "half", "Team", "Repeater"]].copy()
+rx_view["Repeater"] = rx_view["Repeater"].map({0: "", 1: "yes"})
+rx_view.columns = ["Minute", "Half", "Team", "Repeater"]
+table(rx_view, floatfmt=".0f")
+```
+
+Repeaters are kept in the data but flagged, so each rating metric can include
+or exclude them.
+
+```{python}
+code_link("code/repeaters.py#L13-L30", "Repeater detection: flag_repeaters()")
+```
+
+The worked examples later on (Premier League, La Liga and the case study) use the
+original seven-league data from the first version of this study. The league-wide
+comparisons and the model results use all `{python} n_leagues` leagues.
+
+## 4. Analysis
+
+### Game state drives corner share
 
 Teams that are behind attack more, so they win more corners. Teams that are
 ahead sit deeper and win fewer. The chart shows the home side's share of all corners
@@ -146,7 +314,7 @@ The size of the effect varies a lot by league: from about
 Tactical culture, home-crowd effects and how often a league's favourites dominate all play a part.
 **Any adjustment has to be league-specific.**
 
-## 3. Short runs of games distort the picture
+### Short runs of games distort the picture
 
 If every team spent a predictable amount of time in each state, game state
 would wash out of the ratings. Over short samples it doesn't. The left panel
@@ -181,11 +349,10 @@ several teams spent far more or far less time trailing than their strength
 implied. Their raw corner numbers are inflated or deflated as a result, and the
 next opponent doesn't inherit that game state.
 
-## 4. Repeaters
+### Repeaters are stable across teams
 
-A **repeater** is a corner that follows another corner by the same team, in
-the same half, within a minute: the ball goes straight back out off a defender. Runs of
-three or four in a row are common. They aren't independent events, so they add noise.
+The share of corners that are repeaters (defined in section 3) is similar in every league:
+
 
 ```{python}
 rep = load("repeaters_by_league.csv")
@@ -214,11 +381,8 @@ removing repeaters doesn't penalise any particular style of play. It just remove
 correlated noise. In the full `{python} n_leagues`-league model the league range is
 `{python} f"{qa['repeater_rate'].min():.1f}"`–`{python} f"{qa['repeater_rate'].max():.1f}"`%.
 
-```{python}
-code_link("code/repeaters.py", "Repeater detection")
-```
 
-## 5. Supremacy matters in every game state
+### Supremacy matters in every game state
 
 Stronger teams win more corners, and that holds whether they're leading, level or
 trailing. To measure it, each La Liga team-match is put into one of 30 equal-sized
@@ -289,7 +453,7 @@ fig.update_layout(
 show(fig)
 ```
 
-## 6. Adjusted corner values
+### Adjusted corner values
 
 Each corner is valued as the *average* corner rate divided by the rate we'd
 *expect* given the context it was won in:
@@ -348,7 +512,9 @@ promoted and relegated teams carry their ratings between divisions without
 special handling. The prediction model then adds supremacy back in as a separate
 input, taken from the upcoming match's betting lines.
 
-## 7. Do adjusted ratings predict better?
+## 5. Building and testing a predictive model
+
+### Do adjusted ratings predict better?
 
 Team attack and defence ratings are built as rolling averages over the last
 *N* games, using four metrics:
@@ -405,7 +571,7 @@ variance. What matters for betting is whether the model beats the market's
 estimate, which is tested next.
 :::
 
-## 8. Does it beat the market?
+### Does it beat the market?
 
 The model's predicted corner supremacy (home minus away) is compared with
 Pinnacle's implied corner supremacy for every priced match in 2024/25 and
@@ -485,7 +651,13 @@ league: some are consistently profitable, others negative. See the
 [methodology](methodology.qmd) page for caveats.
 :::
 
-## 9. Limitations and next steps
+## 6. Running the model in real time
+
+::: {.callout-note appearance="simple"}
+This section is being written.
+:::
+
+### Limitations and next steps
 
 - **Match length is estimated.** The source data doesn't record stoppage time, so match length is
   taken as the later of 97 minutes and the last recorded event. Better data would

@@ -26,7 +26,7 @@ format:
     css: styles.css
     toc: true
     toc-location: right
-    toc-depth: 2
+    toc-depth: 3
     number-sections: false
     smooth-scroll: true
     embed-resources: false

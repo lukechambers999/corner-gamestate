@@ -28,6 +28,11 @@ OUT.mkdir(exist_ok=True)
 
 SAMPLE_MATCH = "2025-02-12-Everton-Liverpool"
 CASE_STUDY_MATCH = "2024-08-27-Rayo Vallecano-Barcelona"
+TEAM_SAMPLE_MATCHES = ["2025-02-12-Everton-Liverpool", "2024-08-24-Man City-Ipswich",
+                       "2024-09-15-Wolverhampton-Newcastle"]
+REPEATER_MATCH = "2025-02-15-Aston Villa-Ipswich"
+TC_SAMPLE_URL ="https://www.totalcorner.com/match/corner-stats/190784578"  # Aston Villa v West Ham, 22 Mar 2026
+PIN_SAMPLE_DATES = ("2026-02-07", "2026-02-08")  # one Premier League weekend
 
 
 def save(df, name):
@@ -54,6 +59,18 @@ def main():
         "Away corners": ex[(ex["Event"] == "Corner") & (ex["Team"] == m["Away"])].shape[0],
     }]), "example_match_minutes.csv")
     assert len(raw_events) == len(ex), "sample match was dropped by validation"
+
+    # Team-level minutes and corners per state, for a few sample matches
+    tm = df[df["matchid"].isin(TEAM_SAMPLE_MATCHES)].groupby("teammatchid").first().reset_index()
+    tm["order"] = tm["matchid"].map({m: i for i, m in enumerate(TEAM_SAMPLE_MATCHES)})
+    tm["is_away"] = tm["Team"] == tm["Away"]
+    tm = tm.sort_values(["order", "is_away"])
+    save(tm[["Date", "Home", "Away", "Team", "teamleadingmins", "teamdrawingmins", "teamlosingmins",
+             "team_leading_corners", "team_drawing_corners", "team_losing_corners"]], "team_state_sample.csv")
+
+    # Repeater example: every corner in one match, with its repeater flag
+    rp = df[(df["matchid"] == REPEATER_MATCH) & (df["Event"] == "Corner")]
+    save(rp[["Minute", "half", "Team", "Event", "Repeater"]], "repeater_example.csv")
 
     # 2. Data coverage
     matches = df.groupby("matchid").first()
@@ -102,7 +119,20 @@ def main():
         ["Minute", "Team", "teamsup", "team_state", "Repeater", "expected_rate", "avg_rate", "adj_corner_value"]]
     save(case, "case_study_corners.csv")
 
-    # 6. Full-model results from tc_scraper (copied as-is or lightly reduced)
+    # 6. Raw scraper output samples, one match / matchday each
+    tc_raw = pd.read_csv(PORTFOLIO_DATA / "EnglandPremierLeague.csv", dtype=str)
+    tc_match = tc_raw[tc_raw["Game.URL"] == TC_SAMPLE_URL]
+    save(tc_match, "sample_totalcorner_events.csv")
+
+    pin_all = pd.read_excel(RESEARCH / "pin_scraper" / "pinnacle_corners_historical.xlsx")
+    pin = pin_all[(pin_all["League"] == "EnglandPremierLeague")
+                  & pin_all["Date"].between(*PIN_SAMPLE_DATES)].sort_values(["Date", "Home"])
+    save(pin, "sample_pinnacle_corners.csv")
+    save(pd.DataFrame([{"matches": len(pin_all), "leagues": pin_all["League"].nunique(),
+                        "first": pin_all["Date"].min().date(), "last": pin_all["Date"].max().date()}]),
+         "pinnacle_coverage.csv")
+
+    # 7. Full-model results from tc_scraper (copied as-is or lightly reduced)
     print("Copying tc_scraper results...")
     for name in ["gs_home_corner_share.csv", "gs_coefficients.csv", "corner_adj_qa_summary.csv",
                  "bet_backtest_summary.csv", "bet_backtest_results.csv", "ev_variant_peak_pnl_curves.csv"]:

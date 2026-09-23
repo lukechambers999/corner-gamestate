@@ -73,8 +73,10 @@ def load(name, **kw):
 
 def table(df, floatfmt=".2f"):
     """Render a DataFrame as a Markdown table (Quarto styles it)."""
-    return Markdown(df.to_markdown(index=False, floatfmt=floatfmt, intfmt=","))
+    md = df.to_markdown(index=False, floatfmt=floatfmt, intfmt=",")
+    return Markdown(f"::: {{.table-wrap}}\n{md}\n:::")
 
 
 def code_link(path, label=None):
-    return Markdown(f"[{label or 'Code'} &rarr; `{path}`]({REPO}/{path}){{.code-link}}")
+    shown = path.split("#")[0]
+    return Markdown(f"[{label or 'Code'} &rarr; `{shown}`]({REPO}/{path}){{.code-link}}")
