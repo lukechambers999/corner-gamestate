@@ -1,0 +1,67 @@
+body {
+  font-size: 1.02rem;
+  line-height: 1.65;
+}
+
+main.content {
+  max-width: 820px;
+}
+
+h2 {
+  margin-top: 2.6rem;
+  padding-bottom: 0.3rem;
+  border-bottom: 1px solid #e6e5e0;
+}
+
+.lede {
+  font-size: 1.15rem;
+  color: #52514e;
+}
+
+.stat-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin: 1.5rem 0;
+}
+
+.stat {
+  flex: 1 1 160px;
+  border: 1px solid #e6e5e0;
+  border-radius: 8px;
+  padding: 0.8rem 1rem;
+}
+
+.stat .num {
+  display: block;
+  font-size: 1.7rem;
+  font-weight: 600;
+  color: #0b0b0b;
+  line-height: 1.2;
+}
+
+.stat .lbl {
+  display: block;
+  font-size: 0.85rem;
+  color: #52514e;
+}
+
+.code-link {
+  display: inline-block;
+  font-size: 0.85rem;
+  margin-top: 0.4rem;
+}
+
+table {
+  font-size: 0.9rem;
+}
+
+.table-wrap {
+  overflow-x: auto;
+}
+
+.chart-title {
+  font-weight: 600;
+  color: #0b0b0b;
+  margin: 1.2rem 0 0;
+}

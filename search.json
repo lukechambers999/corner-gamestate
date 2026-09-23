@@ -1,0 +1,114 @@
+[
+  {
+    "objectID": "methodology.html",
+    "href": "methodology.html",
+    "title": "Methodology",
+    "section": "",
+    "text": "Game state. The scoreline from a team’s point of view at the moment of an event: leading, level or trailing. Minutes in each state are measured from the minutes goals were scored. Match length is taken as the later of 97 minutes and the last recorded event.\nSupremacy. The expected goal difference (home minus away) implied by Pinnacle’s pre-match Asian handicap and goal lines. Expected goals and supremacy are solved together from the two lines with a root-finder. Team supremacy is that value from the team’s own side (flipped for away teams).\nRepeater. A corner by the same team, in the same half, within one minute of that team’s previous corner. Repeaters are given a value of 0.\nAdjusted corner value. For a corner won by side s (home/away) in state g at team supremacy x:\n\n\\text{value} = \\frac{\\bar r_s}{\\alpha_{s,g} + \\beta_{s,g}\\,x}\n\nwhere \\bar r_s is the league’s average corner rate for side s, and (\\alpha, \\beta) come from a line fitted to corners-per-minute across 30 supremacy buckets for that league, side and state. In the full model the fit is weighted by minutes in each bucket, and closed-doors COVID matches are excluded from fitting."
+  },
+  {
+    "objectID": "methodology.html#definitions",
+    "href": "methodology.html#definitions",
+    "title": "Methodology",
+    "section": "",
+    "text": "Game state. The scoreline from a team’s point of view at the moment of an event: leading, level or trailing. Minutes in each state are measured from the minutes goals were scored. Match length is taken as the later of 97 minutes and the last recorded event.\nSupremacy. The expected goal difference (home minus away) implied by Pinnacle’s pre-match Asian handicap and goal lines. Expected goals and supremacy are solved together from the two lines with a root-finder. Team supremacy is that value from the team’s own side (flipped for away teams).\nRepeater. A corner by the same team, in the same half, within one minute of that team’s previous corner. Repeaters are given a value of 0.\nAdjusted corner value. For a corner won by side s (home/away) in state g at team supremacy x:\n\n\\text{value} = \\frac{\\bar r_s}{\\alpha_{s,g} + \\beta_{s,g}\\,x}\n\nwhere \\bar r_s is the league’s average corner rate for side s, and (\\alpha, \\beta) come from a line fitted to corners-per-minute across 30 supremacy buckets for that league, side and state. In the full model the fit is weighted by minutes in each bucket, and closed-doors COVID matches are excluded from fitting."
+  },
+  {
+    "objectID": "methodology.html#ratings-and-prediction",
+    "href": "methodology.html#ratings-and-prediction",
+    "title": "Methodology",
+    "section": "Ratings and prediction",
+    "text": "Ratings and prediction\n\nEach team has an attack rating (corners won) and a defence rating (corners conceded): rolling means over its last N matches (12, 15, 19, 25 or 30), using only matches played before the fixture being predicted.\nFour metrics are compared: raw counts, raw without repeaters (nr), adjusted values (adj), and adjusted without repeaters (adj_nr).\nHome corners are predicted with OLS on the home attack rating, the away defence rating and match supremacy. Away corners are predicted the same way, the other way round.\nPromoted and relegated teams keep their ratings across divisions. Supremacy in the new league’s fixtures accounts for the change in opposition."
+  },
+  {
+    "objectID": "methodology.html#betting-backtest",
+    "href": "methodology.html#betting-backtest",
+    "title": "Methodology",
+    "section": "Betting backtest",
+    "text": "Betting backtest\n\nTest period: 2024/25 and 2025/26. The OLS model is fitted only on earlier seasons, and predictions are rescaled to the test period’s league corner level.\nMarket: Pinnacle Asian corner handicap. Its implied corner supremacy is compared with the model’s predicted home-minus-away corners.\nSelection: a 1-unit bet on the side the model prefers when the two differ by 0.5 corners or more (a threshold sweep is shown in the analysis).\nSettlement: actual raw corners at Pinnacle’s quoted odds, including quarter-line half-win and half-loss handling and pushes on whole lines.\nTotals: corner over/under was backtested with the same set-up and lost money in every configuration. It’s no longer part of the live model."
+  },
+  {
+    "objectID": "methodology.html#data-caveats",
+    "href": "methodology.html#data-caveats",
+    "title": "Methodology",
+    "section": "Data caveats",
+    "text": "Data caveats\n\nMatch and half lengths aren’t in the source data, so minutes in each state are estimates.\nSome lower-league clubs appear under several spellings across seasons, which splits their rolling windows. This hasn’t been fixed at source yet.\nColombia Primera A/B and England League Two are excluded until they are given league/tier context.\nThe number of matches with odds available varies by league, and so does the ROI. Per-league results are noisy, and the combined figures are the ones to rely on."
+  },
+  {
+    "objectID": "methodology.html#code",
+    "href": "methodology.html#code",
+    "title": "Methodology",
+    "section": "Code",
+    "text": "Code\nThe processing code for the original study is in the code/ folder of this site’s repository. The small data snapshots behind every chart and table are in snapshots/."
+  },
+  {
+    "objectID": "index.html",
+    "href": "index.html",
+    "title": "Corners and Game State",
+    "section": "",
+    "text": "Corner betting markets rate teams on how many corners they win and concede. But the number of corners a team takes depends a lot on the scoreline and on how strong the opponent is, and over a short run of fixtures those two things skew the raw counts. This project removes that bias by valuing every corner in the context it was won, builds team ratings from the adjusted values, and tests them against Pinnacle’s corner prices.\nThe short version:"
+  },
+  {
+    "objectID": "index.html#the-data",
+    "href": "index.html#the-data",
+    "title": "Corners and Game State",
+    "section": "1. The data",
+    "text": "1. The data\nEvent data (goals, corners and cards, with the minute of each) is scraped from totalcorner.com, along with Pinnacle’s pre-match Asian handicap and goal lines. From those two lines I back out each match’s expected goals and supremacy (the expected goal difference), which gives a market-implied measure of how strong each team is going in.\nThe original study covered seven top-flight European leagues from 2014–2025. The production model now covers 45 leagues across 1st and 2nd tiers. The league comparison in section 2, the league explorer in section 5 and sections 7–8 use the full model. The worked examples (Premier League, La Liga and the case study) use the original seven-league data.\nHere is one match as raw events, with the running score and game state added (0 = level, 1 = home leading, 2 = away leading):\n\n\n\n\n\n\n\n\n\n\n\n\n\nMinute\nTeam\nEvent\nHome goals\nAway goals\nGame state\n\n\n\n\n5\nEverton\nCorner\n0\n0\n0\n\n\n11\nEverton\nGoal\n1\n0\n1\n\n\n16\nLiverpool\nGoal\n1\n1\n0\n\n\n27\nLiverpool\nYellow Card\n1\n1\n0\n\n\n35\nEverton\nYellow Card\n1\n1\n0\n\n\n37\nEverton\nYellow Card\n1\n1\n0\n\n\n38\nLiverpool\nCorner\n1\n1\n0\n\n\n47\nLiverpool\nYellow Card\n1\n1\n0\n\n\n48\nEverton\nYellow Card\n1\n1\n0\n\n\n52\nLiverpool\nCorner\n1\n1\n0\n\n\n63\nLiverpool\nYellow Card\n1\n1\n0\n\n\n67\nEverton\nCorner\n1\n1\n0\n\n\n73\nLiverpool\nGoal\n1\n2\n2\n\n\n89\nLiverpool\nCorner\n1\n2\n2\n\n\n98\nEverton\nGoal\n2\n2\n0\n\n\n\n\n\nFrom the state changes we can work out how long each team spent in each state, and which state each corner was won in:\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nHome\nAway\nHome leading\nLevel\nAway leading\nHome corners\nAway corners\n\n\n\n\nEverton\nLiverpool\n5\n68\n25\n2\n3\n\n\n\n\n\n\n\nGame-state processing → code/gamestate.py"
+  },
+  {
+    "objectID": "index.html#game-state-drives-corner-share",
+    "href": "index.html#game-state-drives-corner-share",
+    "title": "Corners and Game State",
+    "section": "2. Game state drives corner share",
+    "text": "2. Game state drives corner share\nTeams that are behind attack more, so they win more corners. Teams that are ahead sit deeper and win fewer. The chart shows the home side’s share of all corners in each league, split by the scoreline at the time.\n\n\nHome share of corners (%) by scoreline\n\n\n                            \n                                            \n\n\nThe size of the effect varies a lot by league: from about 4 points in Scotland Premiership to 28 points in Portugal Segunda Liga. Tactical culture, home-crowd effects and how often a league’s favourites dominate all play a part. Any adjustment has to be league-specific."
+  },
+  {
+    "objectID": "index.html#short-runs-of-games-distort-the-picture",
+    "href": "index.html#short-runs-of-games-distort-the-picture",
+    "title": "Corners and Game State",
+    "section": "3. Short runs of games distort the picture",
+    "text": "3. Short runs of games distort the picture\nIf every team spent a predictable amount of time in each state, game state would wash out of the ratings. Over short samples it doesn’t. The left panel shows how long each Premier League side should have spent leading, level and trailing over the first nine games of 2023/24, based on the pre-match lines. The right panel shows how long they actually did.\n\n\n                            \n                                            \n\n\nNine games is roughly the sample a market has to go on early in a season. Over that stretch, several teams spent far more or far less time trailing than their strength implied. Their raw corner numbers are inflated or deflated as a result, and the next opponent doesn’t inherit that game state."
+  },
+  {
+    "objectID": "index.html#repeaters",
+    "href": "index.html#repeaters",
+    "title": "Corners and Game State",
+    "section": "4. Repeaters",
+    "text": "4. Repeaters\nA repeater is a corner that follows another corner by the same team, in the same half, within a minute: the ball goes straight back out off a defender. Runs of three or four in a row are common. They aren’t independent events, so they add noise.\n\n\n\n\n\nLeague\nCorners\nRepeaters\nRepeater rate\n\n\n\n\nEngland Premier League\n41,782\n6,043\n14.5%\n\n\nFrance Ligue 1\n35,559\n4,627\n13.0%\n\n\nGermany Bundesliga I\n30,551\n3,939\n12.9%\n\n\nItaly Serie A\n40,468\n5,659\n14.0%\n\n\nNetherlands Eredivisie\n31,170\n4,330\n13.9%\n\n\nPortugal Primeira Liga\n32,146\n4,532\n14.1%\n\n\nSpain La Liga\n37,721\n4,858\n12.9%\n\n\n\n\n\n\n\nRepeater rate by team (teams with 50+ matches)\n\n\n                            \n                                            \n\n\nThe rate is stable at around 13–15% across leagues and across teams within each league, so removing repeaters doesn’t penalise any particular style of play. It just removes correlated noise. In the full 45-league model the league range is 12.2–15.0%.\n\n\nRepeater detection → code/repeaters.py"
+  },
+  {
+    "objectID": "index.html#supremacy-matters-in-every-game-state",
+    "href": "index.html#supremacy-matters-in-every-game-state",
+    "title": "Corners and Game State",
+    "section": "5. Supremacy matters in every game state",
+    "text": "5. Supremacy matters in every game state\nStronger teams win more corners, and that holds whether they’re leading, level or trailing. To measure it, each La Liga team-match is put into one of 30 equal-sized supremacy buckets. Within each bucket I calculate corners per minute for each game state, then fit a line per state, separately for home and away sides.\n\n\nLa Liga: corners per minute vs pre-match supremacy\n\n\n                            \n                                            \n\n\nThese six lines give an expected corner rate for any combination of home/away, game state and supremacy. The full model fits the same six lines for every league. The chart below lets you pick any league.\n\n\nFitted corner rate by league (solid = home, dashed = away)"
+  },
+  {
+    "objectID": "index.html#adjusted-corner-values",
+    "href": "index.html#adjusted-corner-values",
+    "title": "Corners and Game State",
+    "section": "6. Adjusted corner values",
+    "text": "6. Adjusted corner values\nEach corner is valued as the average corner rate divided by the rate we’d expect given the context it was won in:\n\n\\text{value} = \\frac{\\text{average rate}_{\\text{home/away}}}{\\text{expected rate}(\\text{home/away},\\ \\text{game state},\\ \\text{supremacy})}\n\nA corner won where corners are usually rare (a big underdog, while leading) is worth more than 1. One won where they’re usually plentiful (a big favourite chasing the game) is worth less than 1. Repeaters are worth 0.\nCase study: Rayo Vallecano 1–2 Barcelona, 27 August 2024. Barcelona went in as 0.77-goal favourites. Rayo scored in the 9th minute, Barcelona equalised in the 60th and won it with an 82nd-minute goal.\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nMin\nTeam\nTeam state\nRepeater\nExpected rate\nAverage rate\nValue\n\n\n\n\n7\nRayo Vallecano\nLevel\n\n0.042\n0.056\n1.349\n\n\n19\nBarcelona\nTrailing\n\n0.069\n0.043\n0.622\n\n\n26\nRayo Vallecano\nLeading\n\n0.029\n0.056\n1.960\n\n\n35\nBarcelona\nTrailing\n\n0.069\n0.043\n0.622\n\n\n69\nRayo Vallecano\nLevel\n\n0.042\n0.056\n1.349\n\n\n80\nBarcelona\nLevel\n\n0.053\n0.043\n0.808\n\n\n81\nBarcelona\nLevel\nyes\n0.053\n0.043\n0.000\n\n\n88\nBarcelona\nLeading\n\n0.038\n0.043\n1.117\n\n\n95\nBarcelona\nLeading\n\n0.038\n0.043\n1.117\n\n\n99\nRayo Vallecano\nTrailing\n\n0.057\n0.056\n0.995\n\n\n100\nRayo Vallecano\nTrailing\nyes\n0.057\n0.056\n0.000\n\n\n101\nRayo Vallecano\nTrailing\nyes\n0.057\n0.056\n0.000\n\n\n\n\n\n\nLevel: Rayo corners are worth 1.35 and Barcelona’s 0.81. The gap reflects the difference in team strength alone.\nRayo leading: a Rayo corner is worth 1.96, because an underdog sitting on a lead rarely wins corners. Barcelona’s are worth 0.62, because a favourite chasing the game is expected to win lots of them.\nBarcelona leading: the game-state and supremacy effects roughly cancel out, and both sides’ corners are worth close to 1.\n\nRaw corners: 6–6. Adjusted: 5.65–4.29. Once you account for Barcelona chasing the game for more than 50 minutes and three repeaters are removed, Rayo’s corner performance looks clearly better than Barcelona’s.\n\n\nBuckets, fitted lines and adjusted values → code/adjusted_values.py\n\n\nBecause supremacy is stripped out of each corner’s value, a team’s rating no longer depends much on who it has played. That means shorter rating windows can be used, so changes of manager or personnel show up sooner. It also means promoted and relegated teams carry their ratings between divisions without special handling. The prediction model then adds supremacy back in as a separate input, taken from the upcoming match’s betting lines."
+  },
+  {
+    "objectID": "index.html#do-adjusted-ratings-predict-better",
+    "href": "index.html#do-adjusted-ratings-predict-better",
+    "title": "Corners and Game State",
+    "section": "7. Do adjusted ratings predict better?",
+    "text": "7. Do adjusted ratings predict better?\nTeam attack and defence ratings are built as rolling averages over the last N games, using four metrics:\n\nraw: raw corner counts\nnr: raw counts with repeaters removed\nadj: adjusted values\nadj_nr: adjusted values with repeaters removed\n\nEach set of ratings, together with match supremacy, feeds an OLS model that predicts each side’s corners in held-out matches. The chart shows the out-of-sample R² improvement over raw counts, for each window length.\n\n\nOut-of-sample R², % change vs raw corner ratings\n\n\n                            \n                                            \n\n\nThe adjusted metrics beat raw counts at every window length on both sides. The gain is largest for home corners, which are the most sensitive to game state. Removing repeaters from raw counts (nr) makes little difference on its own; almost all of the gain comes from the game-state and supremacy adjustment. The setting carried forward is adj_nr over a 25-game window, the strongest overall (adj is level with it on home corners): home R² 0.113 vs 0.100 raw, and away 0.091 vs 0.087.\n\n\n\n\n\n\nR² values of around 0.1 are normal here. Match-level corner counts are dominated by Poisson-like randomness, so no pre-match model explains most of the variance. What matters for betting is whether the model beats the market’s estimate, which is tested next."
+  },
+  {
+    "objectID": "index.html#does-it-beat-the-market",
+    "href": "index.html#does-it-beat-the-market",
+    "title": "Corners and Game State",
+    "section": "8. Does it beat the market?",
+    "text": "8. Does it beat the market?\nThe model’s predicted corner supremacy (home minus away) is compared with Pinnacle’s implied corner supremacy for every priced match in 2024/25 and 2025/26. The prediction model is fitted only on earlier seasons, and ratings use only matches played before each fixture. When the two differ by 0.5 corners or more, a 1-unit bet goes on the side the model prefers, at Pinnacle’s price. Every bet is settled on actual raw corners.\n\n\nCorner handicap ROI by rating set (metric · window)\n\n\n                            \n                                            \n\n\nAll 8 adjusted rating sets are profitable in the handicap market, at 2.1–4.1% ROI on 3,206–3,710 bets each, after paying Pinnacle’s margin.\nHow the edge scales. Raising the minimum disagreement before betting trades volume for conviction. For the adj_nr / 19-game ratings:\n\n\n                            \n                                            \n\n\nBetting every match loses money: Pinnacle is sharp on average. Once the model disagrees by 0.20 corners or more, profit becomes positive. It peaks at 143 units at a 0.50-corner threshold. ROI rises broadly as the threshold tightens, which is the pattern you’d expect if the edge is real. Above about 1.2 corners it gets noisy, because there are only a few hundred bets left. The 0.5 threshold used above was chosen on this same data, so treat the peak as optimistic. The steady rise in ROI is the more reliable evidence.\nThe totals market is different. The same ratings were backtested against Pinnacle’s corner over/under lines, and every metric/window combination lost money. My working hypothesis is that game state shifts which side wins the corners much more than it changes how many corners there are in total, so correcting for it helps the handicap market and doesn’t help totals.\n\n\n\n\n\n\nThis is a backtest over roughly two seasons on historical prices. Bets aren’t guaranteed to have been available at those odds or stakes, and results vary by league: some are consistently profitable, others negative. See the methodology page for caveats."
+  },
+  {
+    "objectID": "index.html#limitations-and-next-steps",
+    "href": "index.html#limitations-and-next-steps",
+    "title": "Corners and Game State",
+    "section": "9. Limitations and next steps",
+    "text": "9. Limitations and next steps\n\nMatch length is estimated. The source data doesn’t record stoppage time, so match length is taken as the later of 97 minutes and the last recorded event. Better data would improve the minute counts.\nOther in-game factors aren’t modelled yet. Red cards and the timing of each game state (the effects grow as the match goes on) are obvious next adjustments.\nOut-of-game factors aren’t modelled either. Manager changes, transfers and end-of-season motivation aren’t captured beyond what the rolling window picks up.\nNo player-level data. Lineup-aware ratings would help with injuries and rotation.\nData quality. Some team names are split across different spellings in lower leagues, which affects rolling windows for the teams involved. Three leagues are excluded until they’re given league/tier context.\nBet sizing. All backtests use flat 1-unit stakes. Kelly-style sizing based on the size of the disagreement is untested."
+  }
+]
