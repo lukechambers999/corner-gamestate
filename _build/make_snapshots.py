@@ -20,6 +20,9 @@ from gamestate import process  # noqa: E402
 from repeaters import flag_repeaters, repeater_rates  # noqa: E402
 from adjusted_values import supremacy_buckets, adjusted_values  # noqa: E402
 
+sys.path.insert(0, str(ROOT))
+from _charts import SHOWCASE_LEAGUES  # noqa: E402
+
 RESEARCH = ROOT.parent
 PORTFOLIO_DATA = RESEARCH / "portfolio" / "data"
 TC = RESEARCH / "tc_scraper"
@@ -112,7 +115,6 @@ def main():
                      & ((team["Date"] > "2021-07-01") | (team["Date"] < "2020-04-01"))]  # exclude closed-doors period
     home_b = supremacy_buckets(liga_team[liga_team["Team"] == liga_team["Home"]]).assign(side="Home")
     away_b = supremacy_buckets(liga_team[liga_team["Team"] == liga_team["Away"]]).assign(side="Away")
-    save(pd.concat([home_b, away_b]), "laliga_sup_buckets.csv")
 
     valued = adjusted_values(liga_events, home_b, away_b)
     case = valued[valued["matchid"] == CASE_STUDY_MATCH][
@@ -138,6 +140,9 @@ def main():
                  "bet_backtest_summary.csv", "bet_backtest_results.csv", "ev_variant_peak_pnl_curves.csv"]:
         shutil.copy(TC / name, OUT / name)
         print(f"  {name}")
+
+    buckets = pd.read_csv(TC / "gs_coefficient_buckets.csv")
+    save(buckets[buckets["League"].isin(SHOWCASE_LEAGUES)], "gs_buckets_showcase.csv")
 
     rb = pd.read_csv(TC / "rating_backtest_results_all_leagues.csv")
     save(rb[rb["scope"] == "global"][["side", "metric", "window_size", "n_train", "n_test",

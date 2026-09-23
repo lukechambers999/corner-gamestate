@@ -12,7 +12,15 @@ SNAP = Path(__file__).resolve().parent / "snapshots"
 REPO = "https://github.com/lukechambers999/corner-gamestate/blob/main"
 
 # Game state -> colour. Fixed everywhere on the site.
-STATE_COLORS = {"Leading": "#1baf7a", "Level": "#2a78d6", "Trailing": "#eb6834"}
+STATE_COLORS = {"Winning": "#1baf7a", "Drawing": "#2a78d6", "Losing": "#eb6834"}
+STATES = list(STATE_COLORS)
+
+# Leagues shown in the league-level charts (the full model covers more)
+SHOWCASE_LEAGUES = [
+    "EnglandPremierLeague", "FranceLigue1", "GermanyBundesligaI", "NetherlandsEredivisie",
+    "PortugalPrimeiraLiga", "SpainLaLiga", "ItalySerieA", "ScotlandPremiership",
+    "TurkiyeSuperLig", "BelgiumFirstDivisionA", "EnglandChampionship", "SpainSegunda",
+]
 ACCENT = "#2a78d6"
 MUTED = "#8a8984"
 POS, NEG = "#2a78d6", "#e34948"  # diverging poles (positive / negative)

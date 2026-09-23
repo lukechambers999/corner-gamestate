@@ -6,7 +6,7 @@ subtitle: "Definitions, data handling and backtest design"
 ## Definitions
 
 **Game state.** The scoreline from a team's point of view at the moment of an
-event: *leading*, *level* or *trailing*. Minutes in each state are measured
+event: *winning*, *drawing* or *losing*. Minutes in each state are measured
 from the minutes goals were scored. Match length is taken as the later of 97
 minutes and the last recorded event.
 

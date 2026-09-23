@@ -12,7 +12,8 @@ import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
-from _charts import (load, show, table, code_link, pretty_league, STATE_COLORS, ACCENT, MUTED, POS, NEG, TEXT_2)
+from _charts import (load, show, table, code_link, pretty_league, STATE_COLORS, STATES, SHOWCASE_LEAGUES,
+                     ACCENT, MUTED, POS, NEG, TEXT_2)
 
 EXCLUDED = {"ColombiaPrimeraA", "ColombiaPrimeraB", "EnglandLeague2"}  # no league/tier context yet
 
@@ -66,8 +67,8 @@ values, and tests them against Pinnacle's corner prices.
 **The short version:**
 
 - Game state has a large effect on corners. In the median league, the home side's share of
-  corners is `{python} f"{med_spread:.0f}"` points higher when trailing than when leading.
-- Over short periods, teams spend much more or much less time leading or trailing than
+  corners is `{python} f"{med_spread:.0f}"` points higher when losing than when winning.
+- Over short periods, teams spend much more or much less time winning or losing than
   their strength would suggest, so raw corner counts are a noisy measure of ability.
 - Valuing each corner by its game state, its home/away context and the pre-match
   supremacy, and dropping "repeater" corners, gives ratings that predict
@@ -109,11 +110,15 @@ table(tc_view)
 ```
 
 **How it's used.** The timeline gives the scoreline at every minute of every
-match. From it we can work out how long each team spent leading, level and
-trailing, and which game state each corner was won in. The pre-match handicap
+match. From it we can work out how long each team spent winning, drawing and
+losing, and which game state each corner was won in. The pre-match handicap
 and goal lines are converted into each match's expected goals and
 **supremacy** (the expected goal difference), a market-implied measure of how
 strong each side is going in. The corner counts are what the model predicts.
+
+```{python}
+code_link("code/odds_to_goals.py", "Odds to expected goals and supremacy")
+```
 
 **Why it's useful.** Most free football data gives only match totals, such as
 "6 corners each". That can't tell you whether a team's corners came while
@@ -138,6 +143,10 @@ A processing step then removes Pinnacle's margin from each pair of odds and
 fits a Poisson distribution (totals) and a Skellam distribution (handicap)
 to find the market's fair **expected total corners** and **expected corner
 supremacy** (home minus away) for each match.
+
+```{python}
+code_link("code/corner_odds.py", "Corner odds to expected corners and corner supremacy")
+```
 
 A sample of the processed output for one Premier League weekend
 (7–8 February 2026):
@@ -180,7 +189,7 @@ each team had in each state, and flagging repeater corners.
 
 Each match's events are processed in time order, keeping a running count of
 goals for each side. After every event the score gives the game state:
-0 = level, 1 = home leading, 2 = away leading. Recording where the state *changes*
+0 = drawing, 1 = home winning, 2 = away winning. Recording where the state *changes*
 marks the start and end of each spell of play at a given scoreline.
 
 Everton v Liverpool, 12 February 2025, with the running score and state added:
@@ -201,8 +210,8 @@ The length of each spell is the gap between one state change and the next. The
 opening spell runs from kick-off to the first goal. The final spell runs to full
 time, taken as the later of 97 minutes and the last recorded event, because the
 source doesn't record stoppage time. Each spell's minutes are credited to the
-right state for each team, so a home lead counts as *leading* minutes for the
-home side and *trailing* minutes for the away side. Every corner is then counted
+right state for each team, so a home lead counts as *winning* minutes for the
+home side and *losing* minutes for the away side. Every corner is then counted
 under the game state it was won in, from the corner-taking team's point of view.
 
 Two checks remove corrupted matches: the minutes in each state must add up to the
@@ -216,8 +225,8 @@ ts = load("team_state_sample.csv")
 ts["Opponent"] = ts["Away"].where(ts["Team"] == ts["Home"], ts["Home"])
 ts_view = ts[["Team", "Opponent", "teamleadingmins", "teamdrawingmins", "teamlosingmins",
               "team_leading_corners", "team_drawing_corners", "team_losing_corners"]]
-ts_view.columns = ["Team", "Opponent", "Mins leading", "Mins level", "Mins trailing",
-                   "Corners leading", "Corners level", "Corners trailing"]
+ts_view.columns = ["Team", "Opponent", "Mins winning", "Mins drawing", "Mins losing",
+                   "Corners winning", "Corners drawing", "Corners losing"]
 table(ts_view, floatfmt=".0f")
 ```
 
@@ -285,7 +294,7 @@ in each league, split by the scoreline at the time.
 
 ```{python}
 share = load("gs_home_corner_share.csv")
-share = share[~share["League"].isin(EXCLUDED)]
+share = share[share["League"].isin(SHOWCASE_LEAGUES)]
 p = share.assign(League=share["League"].map(pretty_league)).pivot(index="League", columns="home_match_state", values="home_share_pct")
 p["spread"] = p["trailing"] - p["leading"]
 p = p.sort_values("spread")
@@ -295,12 +304,12 @@ for league in p.index:  # connector line per league
     fig.add_trace(go.Scatter(x=[p.loc[league, "leading"], p.loc[league, "trailing"]], y=[league, league],
                              mode="lines", line=dict(color="#d8d7d2", width=2),
                              showlegend=False, hoverinfo="skip"))
-for col, label in [("leading", "Leading"), ("level", "Level"), ("trailing", "Trailing")]:
+for col, label in [("leading", "Winning"), ("level", "Drawing"), ("trailing", "Losing")]:
     fig.add_trace(go.Scatter(
         x=p[col], y=p.index, mode="markers", name=f"Home {label.lower()}",
         marker=dict(size=9, color=STATE_COLORS[label], line=dict(color="white", width=1.5)),
         customdata=p["spread"],
-        hovertemplate=f"<b>%{{y}}</b><br>Home {label.lower()}: %{{x:.1f}}%<br>Trailing − leading: %{{customdata:.1f}} pts<extra></extra>",
+        hovertemplate=f"<b>%{{y}}</b><br>Home {label.lower()}: %{{x:.1f}}%<br>Losing − winning: %{{customdata:.1f}} pts<extra></extra>",
     ))
 fig.add_vline(x=50, line=dict(color=MUTED, width=1, dash="dot"))
 fig.update_layout(height=26 * len(p) + 90, title="Home share of corners (%) by scoreline",
@@ -318,20 +327,21 @@ Tactical culture, home-crowd effects and how often a league's favourites dominat
 
 If every team spent a predictable amount of time in each state, game state
 would wash out of the ratings. Over short samples it doesn't. The left panel
-shows how long each Premier League side *should* have spent leading,
-level and trailing over the first nine games of 2023/24, based on the pre-match lines.
+shows how long each Premier League side *should* have spent winning,
+drawing and losing over the first nine games of 2023/24, based on the pre-match lines.
 The right panel shows how long they actually did.
 
 ```{python}
 m = load("epl_2324_state_minutes.csv")
-exp = m[m["basis"] == "Expected"].sort_values("Leading")
+m = m.rename(columns={"Leading": "Winning", "Level": "Drawing", "Trailing": "Losing"})
+exp = m[m["basis"] == "Expected"].sort_values("Winning")
 order = exp["Team"].tolist()
 act = m[m["basis"] == "Actual"].set_index("Team").loc[order].reset_index()
 
 fig = make_subplots(rows=1, cols=2, shared_yaxes=True, horizontal_spacing=0.04,
                     subplot_titles=("Expected (from betting lines)", "Actual"))
 for col_i, df_ in enumerate([exp, act], start=1):
-    for state in ["Leading", "Level", "Trailing"]:
+    for state in STATES:
         fig.add_trace(go.Bar(
             y=df_["Team"], x=df_[state], orientation="h", name=state,
             marker=dict(color=STATE_COLORS[state], line=dict(color="white", width=1)),
@@ -345,26 +355,80 @@ show(fig)
 ```
 
 Nine games is roughly the sample a market has to go on early in a season. Over that stretch,
-several teams spent far more or far less time trailing than their strength
+several teams spent far more or far less time losing than their strength
 implied. Their raw corner numbers are inflated or deflated as a result, and the
 next opponent doesn't inherit that game state.
 
-### Repeaters are stable across teams
+### Supremacy matters in every game state
 
-The share of corners that are repeaters (defined in section 3) is similar in every league:
-
+Stronger teams win more corners, and that holds whether they're winning, drawing
+or losing. To measure it, each league's team-matches are split into 30
+equal-sized buckets by pre-match supremacy, separately for home and away sides.
+Within each bucket I calculate corners per minute in each game state, then fit
+a line per state, weighted by the minutes behind each bucket. Pick a league:
 
 ```{python}
-rep = load("repeaters_by_league.csv")
-rep_team = load("repeaters_by_team.csv")
-t = rep[["League", "corners", "repeaters", "repeater_rate"]].copy()
-t["repeater_rate"] = (t["repeater_rate"] * 100).round(1).astype(str) + "%"
-t.columns = ["League", "Corners", "Repeaters", "Repeater rate"]
-table(t)
+bk = load("gs_buckets_showcase.csv")
+co = load("gs_coefficients.csv")
+state_code = {0: "Drawing", 1: "Winning", 2: "Losing"}
+bk["state"] = bk["team_gamestate"].map(state_code)
+co["state"] = co["team_gamestate"].map(state_code)
+default = "EnglandPremierLeague"
+
+fig = make_subplots(rows=1, cols=2, shared_yaxes=True, horizontal_spacing=0.05, subplot_titles=("Home", "Away"))
+league_of_trace = []
+for lg in SHOWCASE_LEAGUES:
+    for col_i, side in enumerate(["home", "away"], start=1):
+        for state in STATES:
+            d = bk[(bk["League"] == lg) & (bk["home_status"] == side) & (bk["state"] == state)]
+            fit = co[(co["League"] == lg) & (co["home_status"] == side) & (co["state"] == state)].iloc[0]
+            xs = np.array([d["adjsup_mean"].min(), d["adjsup_mean"].max()])
+            fig.add_trace(go.Scatter(
+                x=d["adjsup_mean"], y=d["cpm"], mode="markers", name=state, legendgroup=state,
+                showlegend=(col_i == 1), visible=(lg == default),
+                marker=dict(color=STATE_COLORS[state], size=8, opacity=0.75, line=dict(color="white", width=1)),
+                customdata=d[["mins"]],
+                hovertemplate=f"{side.title()} · {state}<br>Supremacy %{{x:.2f}}<br>%{{y:.3f}} corners/min"
+                              f"<br>%{{customdata[0]:,.0f}} mins<extra></extra>",
+            ), row=1, col=col_i)
+            fig.add_trace(go.Scatter(
+                x=xs, y=fit["Intercept"] + fit["Coefficient"] * xs, mode="lines", legendgroup=state,
+                showlegend=False, visible=(lg == default), line=dict(color=STATE_COLORS[state], width=2),
+                hovertemplate=f"{side.title()} · {state} (fitted)<br>Supremacy %{{x:.2f}}: %{{y:.3f}} corners/min<extra></extra>",
+            ), row=1, col=col_i)
+            league_of_trace += [lg, lg]
+
+buttons = [dict(label=pretty_league(lg), method="update",
+                args=[{"visible": [t == lg for t in league_of_trace]}])
+           for lg in SHOWCASE_LEAGUES]
+fig.update_layout(
+    height=460, title="Corners per minute vs pre-match supremacy",
+    updatemenus=[dict(buttons=buttons, active=SHOWCASE_LEAGUES.index(default), x=1, xanchor="right",
+                      y=1.1, yanchor="bottom", bgcolor="white", bordercolor="#d8d7d2")],
+)
+fig.update_xaxes(title="Team supremacy (goals)")
+fig.update_yaxes(title="Corners per minute", rangemode="tozero", row=1, col=1)
+fig.update_annotations(font=dict(size=13, color=TEXT_2))
+show(fig)
 ```
 
+Each dot is one supremacy bucket, and hovering shows how many minutes of play
+sit behind it. Across leagues, losing sides win corners fastest and winning sides
+slowest, and the lines rise with supremacy. Together, the six lines give an
+*expected* corner rate for any combination of home/away, game state and
+supremacy, which drives the adjusted corner values later in this section.
+
 ```{python}
-rt = rep_team.sort_values("League")
+code_link("code/adjusted_values.py#L26-L47", "Supremacy buckets and fitted lines")
+```
+
+### Repeaters are stable across teams
+
+Each dot below is one team, showing the share of its corners that were
+repeaters (defined in section 3):
+
+```{python}
+rt = load("repeaters_by_team.csv").sort_values("League")
 fig = go.Figure(go.Box(
     x=rt["repeater_rate"], y=rt["League"], orientation="h", boxpoints="all", jitter=0.4, pointpos=0,
     marker=dict(color=ACCENT, size=6, opacity=0.6), line=dict(color=MUTED, width=1), fillcolor="rgba(0,0,0,0)",
@@ -382,77 +446,6 @@ correlated noise. In the full `{python} n_leagues`-league model the league range
 `{python} f"{qa['repeater_rate'].min():.1f}"`–`{python} f"{qa['repeater_rate'].max():.1f}"`%.
 
 
-### Supremacy matters in every game state
-
-Stronger teams win more corners, and that holds whether they're leading, level or
-trailing. To measure it, each La Liga team-match is put into one of 30 equal-sized
-supremacy buckets. Within each bucket I calculate corners per minute for each
-game state, then fit a line per state, separately for home and away sides.
-
-```{python}
-b = load("laliga_sup_buckets.csv")
-name_map = {"Winning": "Leading", "Drawing": "Level", "Losing": "Trailing"}
-b["state"] = b["game_state"].map(name_map)
-
-fig = make_subplots(rows=1, cols=2, shared_yaxes=True, horizontal_spacing=0.05, subplot_titles=("Home", "Away"))
-for col_i, side in enumerate(["Home", "Away"], start=1):
-    for state in ["Leading", "Level", "Trailing"]:
-        d = b[(b["side"] == side) & (b["state"] == state)]
-        slope, intercept = np.polyfit(d["sup_mean"], d["cpm"], 1)
-        xs = np.array([d["sup_mean"].min(), d["sup_mean"].max()])
-        fig.add_trace(go.Scatter(
-            x=d["sup_mean"], y=d["cpm"], mode="markers", name=state, legendgroup=state, showlegend=(col_i == 1),
-            marker=dict(color=STATE_COLORS[state], size=8, opacity=0.75, line=dict(color="white", width=1)),
-            customdata=d[["corners", "mins"]],
-            hovertemplate=f"{side} · {state}<br>Supremacy %{{x:.2f}}<br>%{{y:.3f}} corners/min<br>%{{customdata[0]:,}} corners in %{{customdata[1]:,.0f}} mins<extra></extra>",
-        ), row=1, col=col_i)
-        fig.add_trace(go.Scatter(x=xs, y=intercept + slope * xs, mode="lines", legendgroup=state, showlegend=False,
-                                 line=dict(color=STATE_COLORS[state], width=2), hoverinfo="skip"), row=1, col=col_i)
-fig.update_layout(height=440, title="La Liga: corners per minute vs pre-match supremacy")
-fig.update_xaxes(title="Team supremacy (goals)")
-fig.update_yaxes(title="Corners per minute", row=1, col=1)
-fig.update_annotations(font=dict(size=13, color=TEXT_2))
-show(fig)
-```
-
-These six lines give an *expected* corner rate for any combination of home/away,
-game state and supremacy. The full model fits the same six lines for every league.
-The chart below lets you pick any league.
-
-```{python}
-co = load("gs_coefficients.csv")
-co = co[~co["League"].isin(EXCLUDED)]
-co["League"] = co["League"].map(pretty_league)
-state_code = {0: "Level", 1: "Leading", 2: "Trailing"}
-xs = np.linspace(-2, 2, 21)
-leagues = sorted(co["League"].unique())
-default = "Spain La Liga"
-
-fig = go.Figure()
-for lg in leagues:
-    for _, r in co[co["League"] == lg].iterrows():
-        st = state_code[r["team_gamestate"]]
-        home = r["home_status"] == "home"
-        fig.add_trace(go.Scatter(
-            x=xs, y=r["Intercept"] + r["Coefficient"] * xs, mode="lines",
-            name=f"{st} ({'home' if home else 'away'})", visible=(lg == default),
-            line=dict(color=STATE_COLORS[st], width=2, dash="solid" if home else "dash"),
-            hovertemplate=f"{st}, {'home' if home else 'away'}<br>Supremacy %{{x:.1f}}: %{{y:.3f}} corners/min<extra></extra>",
-        ))
-per = len(fig.data) // len(leagues)
-buttons = [dict(label=lg, method="update",
-                args=[{"visible": [i // per == j for i in range(len(fig.data))]}])
-           for j, lg in enumerate(leagues)]
-fig.update_layout(
-    height=440, title="Fitted corner rate by league (solid = home, dashed = away)",
-    updatemenus=[dict(buttons=buttons, active=leagues.index(default), x=0, xanchor="left", y=1.02, yanchor="bottom",
-                      bgcolor="white", bordercolor="#d8d7d2")],
-    xaxis=dict(title="Team supremacy (goals)"), yaxis=dict(title="Corners per minute", rangemode="tozero"),
-    legend=dict(y=-0.22, yanchor="top"),
-)
-show(fig)
-```
-
 ### Adjusted corner values
 
 Each corner is valued as the *average* corner rate divided by the rate we'd
@@ -462,7 +455,7 @@ $$
 \text{value} = \frac{\text{average rate}_{\text{home/away}}}{\text{expected rate}(\text{home/away},\ \text{game state},\ \text{supremacy})}
 $$
 
-A corner won where corners are usually rare (a big underdog, while leading) is worth
+A corner won where corners are usually rare (a big underdog, while winning) is worth
 more than 1. One won where they're usually plentiful (a big favourite chasing the game)
 is worth less than 1. Repeaters are worth 0.
 
@@ -472,7 +465,6 @@ and won it with an 82nd-minute goal.
 
 ```{python}
 cs = load("case_study_corners.csv")
-cs["team_state"] = cs["team_state"].map(name_map)
 cs["Repeater"] = cs["Repeater"].map({0: "", 1: "yes"})
 tbl = cs[["Minute", "Team", "team_state", "Repeater", "expected_rate", "avg_rate", "adj_corner_value"]].copy()
 tbl.columns = ["Min", "Team", "Team state", "Repeater", "Expected rate", "Average rate", "Value"]
@@ -484,16 +476,16 @@ tot = cs.groupby("Team").agg(raw=("Minute", "size"), adj=("adj_corner_value", "s
 rv, ba = tot.loc["Rayo Vallecano"], tot.loc["Barcelona"]
 ```
 
-- **Level:** Rayo corners are worth
-  `{python} f"{cs[(cs.Team=='Rayo Vallecano')&(cs.team_state=='Level')].adj_corner_value.max():.2f}"` and
-  Barcelona's `{python} f"{cs[(cs.Team=='Barcelona')&(cs.team_state=='Level')&(cs.Repeater=='')].adj_corner_value.max():.2f}"`.
+- **Drawing:** Rayo corners are worth
+  `{python} f"{cs[(cs.Team=='Rayo Vallecano')&(cs.team_state=='Drawing')].adj_corner_value.max():.2f}"` and
+  Barcelona's `{python} f"{cs[(cs.Team=='Barcelona')&(cs.team_state=='Drawing')&(cs.Repeater=='')].adj_corner_value.max():.2f}"`.
   The gap reflects the difference in team strength alone.
-- **Rayo leading:** a Rayo corner is worth
-  `{python} f"{cs[(cs.Team=='Rayo Vallecano')&(cs.team_state=='Leading')].adj_corner_value.max():.2f}"`,
-  because an underdog sitting on a lead rarely wins corners. Barcelona's are
-  worth `{python} f"{cs[(cs.Team=='Barcelona')&(cs.team_state=='Trailing')].adj_corner_value.max():.2f}"`,
+- **Rayo winning:** a Rayo corner is worth
+  `{python} f"{cs[(cs.Team=='Rayo Vallecano')&(cs.team_state=='Winning')].adj_corner_value.max():.2f}"`,
+  because an underdog protecting a lead rarely wins corners. Barcelona's are
+  worth `{python} f"{cs[(cs.Team=='Barcelona')&(cs.team_state=='Losing')].adj_corner_value.max():.2f}"`,
   because a favourite chasing the game is expected to win lots of them.
-- **Barcelona leading:** the game-state and supremacy effects roughly cancel out,
+- **Barcelona winning:** the game-state and supremacy effects roughly cancel out,
   and both sides' corners are worth close to 1.
 
 Raw corners: **`{python} f"{rv.raw:.0f}"`–`{python} f"{ba.raw:.0f}"`**. Adjusted:
