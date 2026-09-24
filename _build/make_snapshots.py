@@ -5,7 +5,7 @@ Run from the repo root:  .venv/Scripts/python _build/make_snapshots.py
 
 Sources (not committed; paths are relative to this repo's parent folder):
   portfolio/data/corner_gamestate.csv, portfolio/data/mins_conv.csv  - notebook-era event data
-  tc_scraper/*.csv                                                    - full-model results
+  tc_scraper/*.csv, tc_scraper/corner_matches_adjusted/            - full-model results
 """
 
 import shutil
@@ -31,8 +31,9 @@ OUT.mkdir(exist_ok=True)
 
 SAMPLE_MATCH = "2025-02-12-Everton-Liverpool"
 CASE_STUDY_MATCH = "2024-08-27-Rayo Vallecano-Barcelona"
-TEAM_SAMPLE_MATCHES = ["2025-02-12-Everton-Liverpool", "2024-08-24-Man City-Ipswich",
-                       "2024-09-15-Wolverhampton-Newcastle"]
+# Chosen for lopsided corner splits: most of a team's corners came in one short spell of winning or losing
+TEAM_SAMPLE_MATCHES = ["2020-06-29-Crystal Palace-Burnley", "2024-10-19-Tottenham-West Ham",
+                       "2017-12-10-Liverpool-Everton"]
 REPEATER_MATCH = "2025-02-15-Aston Villa-Ipswich"
 TC_SAMPLE_URL ="https://www.totalcorner.com/match/corner-stats/190784578"  # Aston Villa v West Ham, 22 Mar 2026
 PIN_SAMPLE_DATES = ("2026-02-07", "2026-02-08")  # one Premier League weekend
@@ -41,6 +42,21 @@ PIN_SAMPLE_DATES = ("2026-02-07", "2026-02-08")  # one Premier League weekend
 def save(df, name):
     df.to_csv(OUT / name, index=False)
     print(f"  {name:40s} {len(df):>6} rows")
+
+
+def team_repeater_rates(min_matches=100):
+    """Repeater share per team across the 12 showcase leagues, from the full model's per-match files."""
+    rows = []
+    for lg in SHOWCASE_LEAGUES:
+        m = pd.read_csv(TC / "corner_matches_adjusted" / f"{lg}_matches.csv")
+        for side in ["home", "away"]:
+            rows.append(pd.DataFrame({"League": lg, "Team": m[side.capitalize()],
+                                      "corners": m[f"{side}_corners_raw"], "repeaters": m[f"{side}_reps"]}))
+    rt = (pd.concat(rows).groupby(["League", "Team"])
+          .agg(matches=("corners", "size"), corners=("corners", "sum"), repeaters=("repeaters", "sum"))
+          .reset_index())
+    rt["repeater_rate"] = rt["repeaters"] / rt["corners"]
+    return rt[rt["matches"] >= min_matches]
 
 
 def main():
@@ -68,7 +84,7 @@ def main():
     tm["order"] = tm["matchid"].map({m: i for i, m in enumerate(TEAM_SAMPLE_MATCHES)})
     tm["is_away"] = tm["Team"] == tm["Away"]
     tm = tm.sort_values(["order", "is_away"])
-    save(tm[["Date", "Home", "Away", "Team", "teamleadingmins", "teamdrawingmins", "teamlosingmins",
+    save(tm[["Date", "Home", "Away", "Team", "teamsup", "teamleadingmins", "teamdrawingmins", "teamlosingmins",
              "team_leading_corners", "team_drawing_corners", "team_losing_corners"]], "team_state_sample.csv")
 
     # Repeater example: every corner in one match, with its repeater flag
@@ -106,8 +122,7 @@ def main():
 
     # 4. Repeaters
     save(repeater_rates(df, "League"), "repeaters_by_league.csv")
-    rt = repeater_rates(df, ["League", "Team"])
-    save(rt[rt["matches"] > 50], "repeaters_by_team.csv")
+    save(team_repeater_rates(), "repeaters_by_team.csv")
 
     # 5. La Liga supremacy x state buckets, and the Rayo-Barcelona case study
     liga_events = df[df["League"] == "Spain La Liga"]
