@@ -292,7 +292,7 @@ repeaters:
 
 ```{python}
 rx_view = rx[["Minute", "half", "Team", "Repeater"]].copy()
-rx_view["Repeater"] = rx_view["Repeater"].map({0: "", 1: "yes"})
+rx_view["Repeater"] = rx_view["Repeater"].map({0: "", 1: "TRUE"})
 rx_view.columns = ["Minute", "Half", "Team", "Repeater"]
 table(rx_view, floatfmt=".0f")
 ```
@@ -496,7 +496,7 @@ Barcelona equalised in the 60th and won it with an 82nd-minute goal.
 
 ```{python}
 cs = load("case_study_corners.csv")
-cs["Repeater"] = cs["Repeater"].map({0: "", 1: "yes"})
+cs["Repeater"] = cs["Repeater"].map({0: "", 1: "TRUE"})
 tbl = cs[["Minute", "Team", "team_state", "Repeater", "expected_rate", "avg_rate", "adj_corner_value"]].copy()
 tbl.columns = ["Min", "Team", "Team state", "Repeater", "Expected rate", "Average rate", "Value"]
 table(tbl, floatfmt=".3f")
