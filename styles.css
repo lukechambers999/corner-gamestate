@@ -78,3 +78,122 @@ table {
 .table-wrap table th {
   vertical-align: bottom;
 }
+
+/* Interactive ratings table (section 5) */
+.metric-toggle {
+  display: inline-flex;
+  border: 1px solid #d6d5cf;
+  border-radius: 6px;
+  overflow: hidden;
+  margin: 0.4rem 0 0.6rem;
+}
+
+.metric-toggle button {
+  border: 0;
+  background: #fff;
+  color: #52514e;
+  padding: 0.3rem 0.9rem;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.metric-toggle button + button {
+  border-left: 1px solid #d6d5cf;
+}
+
+.metric-toggle button[aria-pressed="true"] {
+  background: #2a78d6;
+  color: #fff;
+}
+
+.ratings-table th {
+  cursor: pointer;
+  user-select: none;
+}
+
+.ratings-table th[data-sort="asc"]::after { content: " ▲"; font-size: 0.7em; }
+.ratings-table th[data-sort="desc"]::after { content: " ▼"; font-size: 0.7em; }
+
+.ratings-table td:not(:first-child),
+.ratings-table th:not(:first-child) {
+  text-align: right;
+}
+
+.ratings-note {
+  font-size: 0.85rem;
+  color: #52514e;
+}
+
+/* Live predictions table (section 6), styled after the tc_scraper dashboard's Predictions tab */
+.dash-table-wrap {
+  overflow-x: auto;
+  background: #fcfcfb;
+  border: 1px solid rgba(11, 11, 11, 0.10);
+  border-radius: 10px;
+  padding: 6px 8px;
+  margin: 0.6rem 0 1rem;
+}
+
+table.dash-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12.5px;
+  color: #0b0b0b;
+  margin: 0;
+}
+
+table.dash-table th {
+  text-align: right;
+  font-weight: 600;
+  color: #52514e;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  padding: 8px 6px;
+  border-bottom: 1px solid #e1e0d9;
+  white-space: nowrap;
+}
+
+table.dash-table td {
+  text-align: right;
+  padding: 6px 6px;
+  border-bottom: 1px solid #e1e0d9;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+table.dash-table th.text,
+table.dash-table td.text {
+  text-align: left;
+  font-variant-numeric: proportional-nums;
+}
+
+table.dash-table tbody tr:hover { background: rgba(42, 120, 214, 0.06); }
+table.dash-table tbody tr.value-row { background: rgba(12, 163, 12, 0.12); }
+table.dash-table tbody tr.value-row:hover { background: rgba(12, 163, 12, 0.20); }
+
+.status-badge {
+  font-size: 10px;
+  font-weight: 650;
+  border-radius: 4px;
+  padding: 1px 6px;
+  color: #0ca30c;
+  border: 1px solid #0ca30c;
+}
+
+table.dash-table > tbody > tr > * {
+  background: transparent;
+  box-shadow: none;
+}
+
+/* On wide screens the left margin is empty, so let the wide predictions table extend into it */
+@media (min-width: 1400px) {
+  .cell-output-display:has(> .dash-table-wrap) {
+    overflow: visible;
+  }
+
+  .dash-table-wrap {
+    width: calc(100% + 300px);
+    margin-left: -300px;
+  }
+}

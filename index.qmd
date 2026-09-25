@@ -554,29 +554,75 @@ last *N* games, using four metrics:
 -   **adj**: adjusted values
 -   **adj_nr**: adjusted values with repeaters removed
 
-A rating of 1.00 means a team wins corners at the league-average rate
-for that venue. The table shows current attack ratings for a sample of
-Premier League teams on all four metrics, over a 25-game window:
+The table shows current ratings for every Premier League team on each
+metric. A rating of 1.00 is league average for that venue. Higher attack
+means a team wins more corners, and higher defence means it concedes
+more. Use the buttons to switch metric, and click a column to sort.
 
 ```{python}
+import json
+from IPython.display import HTML
 cr = load("epl_current_ratings.csv")
 cr_asof = pd.to_datetime(cr[["home_rating_as_of", "away_rating_as_of"]].stack()).max()
-metrics = ["raw", "nr", "adj", "adj_nr"]
-cr_view = pd.concat([
-    cr.pivot(index="Team", columns="metric", values=f"{side}_corner_attack_rating")[metrics]
-      .add_prefix(f"{side.capitalize()} ")
-    for side in ["home", "away"]], axis=1)
-cr_view = cr_view.loc[cr["Team"].unique()].reset_index()
-table(cr_view, floatfmt=".2f")
+cr_data = {m: g[["Team", "home_corner_attack_rating", "home_corner_defense_rating", "away_corner_attack_rating",
+                 "away_corner_defence_rating"]].round(2).values.tolist() for m, g in cr.groupby("metric")}
+HTML("""
+<div class="ratings-widget">
+  <div class="metric-toggle" role="group" aria-label="Rating metric">
+    <button type="button" data-metric="raw">raw</button><button type="button" data-metric="nr">nr</button><button
+      type="button" data-metric="adj">adj</button><button type="button" data-metric="adj_nr" aria-pressed="true">adj_nr</button>
+  </div>
+  <div class="table-wrap"><table class="table ratings-table">
+    <thead><tr><th data-col="0">Team</th><th data-col="1">Home attack</th><th data-col="2">Home defence</th>
+      <th data-col="3">Away attack</th><th data-col="4">Away defence</th></tr></thead>
+    <tbody></tbody>
+  </table></div>
+  <div class="ratings-note"></div>
+</div>
+<script>
+(() => {
+  const DATA = %s, ALL_TEAMS = %s;
+  const root = document.currentScript.previousElementSibling;
+  const body = root.querySelector("tbody"), note = root.querySelector(".ratings-note");
+  let metric = "adj_nr", sortCol = 1, sortDir = -1;
+  function render() {
+    const byTeam = Object.fromEntries((DATA[metric] || []).map(r => [r[0], r]));
+    const rows = ALL_TEAMS.map(t => byTeam[t] || [t, null, null, null, null]);
+    rows.sort((a, b) => {
+      const x = a[sortCol], y = b[sortCol];
+      if (x === null) return 1; if (y === null) return -1;
+      return (x < y ? -1 : x > y ? 1 : 0) * sortDir;
+    });
+    body.innerHTML = rows.map(r => "<tr><td>" + r[0] + "</td>" +
+      r.slice(1).map(v => "<td>" + (v === null ? "–" : v.toFixed(2)) + "</td>").join("") + "</tr>").join("");
+    const missing = ALL_TEAMS.length - (DATA[metric] || []).length;
+    note.textContent = missing ? missing + " promoted teams have no " + metric +
+      " rating yet: raw and nr ratings need 10 Premier League matches at each venue." : "";
+    root.querySelectorAll("th").forEach(th => {
+      th.dataset.sort = +th.dataset.col === sortCol ? (sortDir === 1 ? "asc" : "desc") : "";
+    });
+    root.querySelectorAll(".metric-toggle button").forEach(b => b.setAttribute("aria-pressed", b.dataset.metric === metric));
+  }
+  root.querySelectorAll(".metric-toggle button").forEach(b => b.addEventListener("click", () => { metric = b.dataset.metric; render(); }));
+  root.querySelectorAll("th").forEach(th => th.addEventListener("click", () => {
+    const c = +th.dataset.col;
+    if (c === sortCol) sortDir *= -1; else { sortCol = c; sortDir = c === 0 ? 1 : -1; }
+    render();
+  }));
+  render();
+})();
+</script>
+""" % (json.dumps(cr_data), json.dumps(sorted(cr["Team"].unique()))))
 ```
 
-On raw counts, Man City, Liverpool, Arsenal and Chelsea look like the
-league's strongest corner-winning sides at home, at around 1.15 to 1.30.
-On the adjusted metrics they drop back to roughly 0.9 to 1.1, because
-most of their raw advantage is what their supremacy would already
-predict. Bournemouth and Newcastle stay near the top at home on every
-metric, so their corner numbers are not just a product of being
-favourites. Ratings as of `{python} f"{cr_asof.day} {cr_asof:%B %Y}"`.
+On raw counts, Man City, Chelsea, Liverpool and Arsenal all have home
+attack ratings above 1.1. On the adjusted metrics Liverpool and Arsenal
+drop to around 1.0 or below, and Man City and Chelsea to about 1.1,
+because most of their raw advantage is what their supremacy would
+already predict. Leeds, Fulham and Bournemouth move the other way: they
+win more home corners than their supremacy and game states would
+suggest. Ratings use a 19-game window, the same as the live model, and
+are as of `{python} f"{cr_asof.day} {cr_asof:%B %Y}"`.
 
 Each set of ratings, together with match supremacy, feeds an OLS model
 that predicts each side's corners for matches in the test dataset. The
@@ -634,19 +680,15 @@ model prefers, at Pinnacle's price. Every bet is settled on actual raw
 corners.
 
 ```{python}
-bg = bets_g.copy()
-bg["combo"] = bg["metric"] + " · " + bg["window_size"].astype(str)
-bg = bg.sort_values("roi")
-fig = go.Figure(go.Bar(
-    x=bg["roi"], y=bg["combo"], orientation="h",
-    marker=dict(color=np.where(bg["roi"] >= 0, POS, NEG)),
-    customdata=bg[["n_bets", "total_pnl"]],
-    text=(bg["roi"] * 100).map("{:+.1f}%".format), textposition="outside", textfont=dict(color=TEXT_2),
-    hovertemplate="<b>%{y}</b><br>ROI %{x:.2%}<br>%{customdata[0]:,} bets · %{customdata[1]:+.1f} units<extra></extra>",
-))
-fig.update_layout(title="Corner handicap ROI by rating set (metric · window)", height=360,
-                  xaxis=dict(tickformat=".0%", range=[0, bg["roi"].max() * 1.25]), yaxis=dict(title=None))
-show(fig)
+bg = bets_g.sort_values("total_pnl", ascending=False)
+bg_view = pd.DataFrame({
+    "Metric": bg["metric"],
+    "Window": bg["window_size"].astype(str) + "g",
+    "Bets": bg["n_bets"],
+    "Profit (units)": bg["total_pnl"],
+    "ROI": bg["roi"].map("{:+.1%}".format),
+})
+table(bg_view, floatfmt=".1f")
 ```
 
 All `{python} n_combos` adjusted rating sets are profitable in the
@@ -727,41 +769,48 @@ This section is being written.
 Each day the pipeline rebuilds the ratings, predicts corners for
 upcoming fixtures and joins the predictions to Pinnacle's live corner
 handicap prices. A bet is flagged when the model's corner supremacy
-differs from Pinnacle's by at least 0.5 corners, the threshold tested
-in section 5, or when the expected value on one side is at least 8%.
-A sample from one weekend in September 2026:
+differs from Pinnacle's by at least 0.5 corners, the threshold tested in
+section 5, or when the expected value on one side is at least 8%. A
+sample from one weekend in September 2026:
 
 ```{python}
-ps = load("predictions_sample.csv")
-home_bet = ps["value_bet"] == "home"
-bet_line = ps["Corner Handicap"].where(home_bet, -ps["Corner Handicap"])
-ps_view = pd.DataFrame({
-    "Date": pd.to_datetime(ps["Date"]).dt.strftime("%d %b"),
-    "League": ps["League"].map(pretty_league),
-    "Match": ps["Home"] + " v " + ps["Away"],
-    "Model sup": ps["predicted_supremacy"],
-    "Pinnacle sup": ps["corner_supremacy"],
-    "Difference": ps["diff_sup"],
-    "Bet": (ps["Home"].where(home_bet, ps["Away"]) + " " + bet_line.map(lambda v: f"{v:+.1f}" if v else "0.0")).where(ps["value_bet"].notna(), "–"),
-    "Odds": ps["Home Handicap Corners Odds"].where(home_bet, ps["Away Handicap Corners Odds"]),
-    "P(cover)": ps["p_cover_home"].where(home_bet, ps["p_cover_away"]),
-    "EV": ps["ev_home"].where(home_bet, ps["ev_away"]),
-})
-no_bet = ps["value_bet"].isna()
-ps_view[["Odds", "P(cover)", "EV"]] = ps_view[["Odds", "P(cover)", "EV"]].astype(object)
-ps_view.loc[no_bet, ["Odds", "P(cover)", "EV"]] = "–"
-ps_view.loc[~no_bet, "Odds"] = ps_view.loc[~no_bet, "Odds"].map(lambda v: f"{v:.2f}")
-for c in ["P(cover)", "EV"]:
-    ps_view.loc[~no_bet, c] = ps_view.loc[~no_bet, c].map(lambda v: f"{v:.0%}")
-table(ps_view, floatfmt=".2f")
+ps = load("predictions_sample.csv").sort_values(["Date", "League"])
+
+def _num(v, signed=False):
+    return "–" if pd.isna(v) else (f"{v:+.2f}" if signed and v > 0 else f"{v:.2f}")
+
+cols = ["Date", "League", "Home", "Away", "Adjsup", "H Pred", "A Pred", "Pred Tot", "Pred Sup",
+        "Pin Tot", "Pin Sup", "Diff Tot", "Diff Sup", "EV", "P(cover)", "Value"]
+rows = []
+for r in ps.itertuples():
+    side = r.value_bet if isinstance(r.value_bet, str) else ""
+    ev = getattr(r, f"ev_{side}") if side else None
+    pc = getattr(r, f"p_cover_{side}") if side else None
+    cells = [f'<td class="text">{pd.Timestamp(r.Date):%d %b}</td>', f'<td class="text">{pretty_league(r.League)}</td>',
+             f'<td class="text">{r.Home}</td>', f'<td class="text">{r.Away}</td>']
+    cells += [f"<td>{_num(v)}</td>" for v in (r.adjsup, r.predicted_home_corners, r.predicted_away_corners,
+                                              r.predicted_total, r.predicted_supremacy, r.corner_total,
+                                              r.corner_supremacy)]
+    cells += [f"<td>{_num(r.diff_total, True)}</td>", f"<td>{_num(r.diff_sup, True)}</td>",
+              f"<td>{side[0].upper() + ' ' + _num(ev, True) if side else '–'}</td>",
+              f"<td>{f'{pc:.0%}' if side else '–'}</td>",
+              f'<td>{f"<span class=status-badge>{side.upper()}</span>" if side else ""}</td>']
+    rows.append(f'<tr class="{"value-row" if side else ""}">{"".join(cells)}</tr>')
+HTML('<div class="dash-table-wrap"><table class="dash-table"><thead><tr>'
+     + "".join(f'<th class="{"text" if c in ("Date", "League", "Home", "Away") else ""}">{c}</th>' for c in cols)
+     + "</tr></thead><tbody>" + "".join(rows) + "</tbody></table></div>")
 ```
 
-Supremacy is home corners minus away corners, and the difference is the
-model minus Pinnacle. P(cover) is the model's probability that the bet
+Pred is the model's predicted corners and Pin is Pinnacle's implied
+line; supremacy (Sup) is home corners minus away corners, and Diff is
+the model minus Pinnacle. Adjsup is the match's expected goal
+supremacy, taken from the pre-match goal markets. For a flagged bet, EV is the
+expected return per unit staked on that side (H or A) at Pinnacle's
+handicap odds, and P(cover) is the model's probability that the bet
 wins, with each side's corners treated as an independent Poisson count
-around its prediction, and EV is the expected return per unit staked at
-Pinnacle's odds. Where the model and the market agree, as in Napoli v
-Bologna or Inter Milan v Udinese, there's no bet.
+around its prediction. Where the model and the market agree, as in
+Hajduk Split v Slaven Belupo or FCSB v Petrolul Ploiesti, there's no
+bet.
 
 ### Limitations and next steps
 
