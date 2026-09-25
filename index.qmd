@@ -70,9 +70,9 @@ ratings from the adjusted values.
 -   Game state has a large effect on corners. In the median league, the
     home side's share of corners is `{python} f"{med_spread:.0f}"`
     points higher when losing than when winning.
--   Over short periods, teams spend much more or much less time winning
-    or losing than their strength would suggest, so raw corner counts
-    are a noisy measure of ability.
+-   Over short time periods, teams can spend disproportionate amounts of
+    time in winning or losing positions, so raw corner counts become
+    skewed by game state effects.
 -   Valuing each corner by its game state, its home/away context and the
     pre-match supremacy, and dropping "repeater" corners, gives ratings
     that predict future corners better than raw counts do at every
@@ -170,16 +170,16 @@ pin_view = pin[["Date", "Home", "Away", "Corner Handicap", "Home Handicap Corner
                 "Away Handicap Corners Odds", "Asian Corners Line", "Asian Corners O Odds",
                 "Asian Corners U Odds", "corner_supremacy", "corner_total"]]
 pin_view.columns = ["Date", "Home", "Away", "Handicap line", "Home odds", "Away odds",
-                    "Totals line", "Over odds", "Under odds", "Fair supremacy", "Fair total"]
+                    "Totals line", "Over odds", "Under odds", "Corner Supremacy", "Corner Total"]
 table(pin_view, floatfmt=".2f")
 ```
 
 **How it's used.** Pinnacle's corner supremacy is the benchmark the
 model has to beat. In the backtest, the model's predicted supremacy is
-compared with Pinnacle's for each match. When the two disagree by
-enough, a bet is placed at Pinnacle's quoted odds and settled on the
-actual corners. In the live model, the same comparison flags value bets
-on upcoming fixtures.
+compared with Pinnacle's for each match. When the two disagree by a
+specific threshold, a one unit bet is placed at Pinnacle's quoted odds
+and settled on the actual corners. In the live model, the same
+comparison flags value bets on upcoming fixtures.
 
 **Why it's useful.** Pinnacle is widely regarded as the sharpest
 bookmaker. It runs low margins, and is known for not restricting winning
@@ -226,11 +226,7 @@ The total minutes each team spends in each game state is calculated
 using the previous table. Every corner is then counted under the game
 state it was won in, from the corner-taking team's point of view.
 
-Two checks remove corrupted matches: the minutes in each state must add
-up to the match length, and the corners in each state must add up to the
-scraped full-time total.
-
-The result is one row per team per match. Three Premier League examples:
+The result is one row per team per match. Two Premier League examples:
 
 ```{python}
 ts = load("team_state_sample.csv")
@@ -247,16 +243,17 @@ Supremacy is the market's expected goal difference from each team's
 point of view, so a positive number means the team was the pre-match
 favourite.
 
-In all three matches, most of one team's corners came in a short spell
-of winning or losing. Crystal Palace won 8 of their 9 corners in the 35
-minutes they trailed Burnley, and only one in the 62 minutes before
-that. Tottenham won 7 corners in the 18 minutes they trailed West Ham,
-then none in the 45 minutes they led. Liverpool won 9 corners in the 35
-minutes they led Everton, three times as many as in the 62 minutes at
-level. Raw full-time totals such as 9 to 1 or 12 to 1 hide how much of
-each team's count came from the scoreline rather than from its
-underlying corner strength. The analysis in section 4 corrects for
-exactly this.
+This is a snapshot of the effect that game state and supremacy can have
+on raw corner counts. Crystal Palace got 8 of their 9 corners during
+the 35 minutes they were losing. Tottenham, in a match
+they were big favourites, got all 13 of their corners during the 52
+minutes when they were drawing or losing, and 0 in the 45 minutes they
+were winning.
+
+These counts are aggregated at the league level in the analysis in
+section four to find base rates for different combinations of game state
+and supremacy. They also provide the context we need to make game state
+and supremacy adjusted team ratings.
 
 ```{python}
 code_link("code/gamestate.py#L38-L82", "Minutes in each state: add_gamestate_minutes()")
@@ -275,16 +272,15 @@ n_villa, n_villa_rep = len(villa), int(villa["Repeater"].sum())
 ```
 
 A **repeater** is a corner that comes straight after another corner by
-the same team. Repeaters matter because they aren't statistically
-independent events: they depend on the corner before them. A team can
-pick up two or more corners in quick succession, but this is not a
-fair reflection of their corner-generating strength. Over a small sample of
-games, a few of these spells can skew a team's ratings.
+the same team. Repeaters are not statistically independent events: they
+depend on the corner before them. A team can pick up two or more corners
+in quick succession, but this is not a fair reflection of their
+corner-generating strength. Over a small sample of games, a few of these
+spells can skew a team's ratings.
 
 Our minute-level event data allows us to identify repeaters. A corner is
-flagged as a repeater if the previous event in the match was also a
-corner, taken by the same team, in the same half, and no more than one
-minute earlier.
+flagged as a repeater if the previous event was also a corner, taken by
+the same team, in the same half, and no more than one minute earlier.
 
 All the corners from Aston Villa v Ipswich, 15 February 2025. Villa won
 `{python} n_villa` corners, and `{python} n_villa_rep` of them were
@@ -309,7 +305,7 @@ code_link("code/repeaters.py#L13-L30", "Repeater detection: flag_repeaters()")
 ### Game state affects corner rates
 
 Teams that are behind attack more, so they win more corners. Teams that
-are ahead sit deeper and win fewer. The chart shows the home side's
+are ahead tend to sit deeper and win fewer. The chart shows the home side's
 share of all corners in each league, split by the game state at the
 time.
 
@@ -348,8 +344,8 @@ be league-specific.**
 
 ### Short runs of games distort the picture
 
-If every team's game state minutes were proportionate to their underlying
-strength, game state biases would not be present in the raw counts.
+If every team's game state minutes were proportionate to their
+underlying strength, game state biases less prevalent in the raw counts.
 However, football matches are messy and chaotic and, especially over
 short samples of games, teams spending disproportionate amounts of
 minutes in different game states can distort corner rates.
@@ -383,7 +379,8 @@ show(fig)
 ```
 
 Several teams spent far more or far less time losing than their strength
-implied. Their raw corner numbers are inflated or deflated as a result.
+implied. Their raw corner numbers could be inflated or deflated as a
+result.
 
 ### Supremacy matters in every game state
 
@@ -392,7 +389,9 @@ drawing or losing. To measure it, each league's team-matches are split
 into 30 equal-sized buckets by pre-match supremacy, separately for home
 and away sides. Within each bucket I calculate corners per minute in
 each game state, then fit a line per state, weighted by the minutes
-behind each bucket. Pick a league:
+behind each bucket.
+
+Pick a league:
 
 ```{python}
 bk = load("gs_buckets_showcase.csv")
@@ -473,8 +472,8 @@ show(fig)
 
 The rate is stable at around 13--15% across leagues and across teams
 within each league: 90% of the `{python} len(rt)` teams fall between
-`{python} rep_lo`% and `{python} rep_hi`%. So removing repeaters doesn't penalise any
-particular style of play. It just removes correlated noise.
+`{python} rep_lo`% and `{python} rep_hi`%. So removing repeaters doesn't
+penalise any particular style of play. It just removes correlated noise.
 
 ### Adjusted corner values
 
@@ -517,16 +516,20 @@ rv, ba = tot.loc["Rayo Vallecano"], tot.loc["Barcelona"]
     because an underdog protecting a lead rarely wins corners.
     Barcelona's are worth
     `{python} f"{cs[(cs.Team=='Barcelona')&(cs.team_state=='Losing')].adj_corner_value.max():.2f}"`,
-    because a favourite chasing the game is expected to win lots of
-    them.
+    because a favourite chasing the game typically wins more corners.
 -   **Barcelona winning:** the game-state and supremacy effects roughly
     cancel out, and both sides' corners are worth close to 1.
 
-Raw corners: **`{python} f"{rv.raw:.0f}"`--`{python} f"{ba.raw:.0f}"`**.
-Adjusted: **`{python} f"{rv.adj:.2f}"`--`{python} f"{ba.adj:.2f}"`**.
-Once you account for Barcelona chasing the game for more than 50 minutes
-and three repeaters are removed, Rayo's corner performance looks clearly
-better than Barcelona's.
+Raw corners: Rayo Vallecano
+**`{python} f"{rv.raw:.0f}"`--`{python} f"{ba.raw:.0f}"`** Barcelona.
+
+Adjusted: Rayo Vallecano
+**`{python} f"{rv.adj:.2f}"`--`{python} f"{ba.adj:.2f}"`** Barcelona.
+
+Once you account for the relative strength of the teams and Barcelona
+chasing the game for more than 50 minutes, Rayo's corner performance
+looks more impressive than Barcelona's, even with two of their repeater
+corners removed.
 
 ```{python}
 code_link("code/adjusted_values.py", "Buckets, fitted lines and adjusted values")

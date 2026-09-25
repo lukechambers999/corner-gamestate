@@ -32,8 +32,7 @@ OUT.mkdir(exist_ok=True)
 SAMPLE_MATCH = "2025-02-12-Everton-Liverpool"
 CASE_STUDY_MATCH = "2024-08-27-Rayo Vallecano-Barcelona"
 # Chosen for lopsided corner splits: most of a team's corners came in one short spell of winning or losing
-TEAM_SAMPLE_MATCHES = ["2020-06-29-Crystal Palace-Burnley", "2024-10-19-Tottenham-West Ham",
-                       "2017-12-10-Liverpool-Everton"]
+TEAM_SAMPLE_MATCHES = ["2020-06-29-Crystal Palace-Burnley", "2024-10-19-Tottenham-West Ham"]
 REPEATER_MATCH = "2025-02-15-Aston Villa-Ipswich"
 TC_SAMPLE_URL ="https://www.totalcorner.com/match/corner-stats/190784578"  # Aston Villa v West Ham, 22 Mar 2026
 PIN_SAMPLE_DATES = ("2026-02-07", "2026-02-08")  # one Premier League weekend
