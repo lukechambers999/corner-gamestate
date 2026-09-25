@@ -8,6 +8,7 @@ Sources (not committed; paths are relative to this repo's parent folder):
   tc_scraper/*.csv, tc_scraper/corner_matches_adjusted/            - full-model results
 """
 
+import os
 import shutil
 import sys
 from pathlib import Path
@@ -36,6 +37,16 @@ TEAM_SAMPLE_MATCHES = ["2020-06-29-Crystal Palace-Burnley", "2024-10-19-Tottenha
 REPEATER_MATCH = "2025-02-15-Aston Villa-Ipswich"
 TC_SAMPLE_URL ="https://www.totalcorner.com/match/corner-stats/190784578"  # Aston Villa v West Ham, 22 Mar 2026
 PIN_SAMPLE_DATES = ("2026-02-07", "2026-02-08")  # one Premier League weekend
+# Spread from the highest to the lowest raw home attack ratings; all have a full rating on every metric
+RATINGS_SAMPLE_TEAMS = ["Man City", "Liverpool", "Arsenal", "Chelsea", "Newcastle", "Bournemouth",
+                        "Everton", "Crystal Palace"]
+RATINGS_WINDOW, RATINGS_MIN_PERIODS = 25, 10  # the adj_nr / 25-game setting carried forward in section 5
+# One weekend of live predictions (13-15 Sep 2026, from the 18 Sep daily run) with Pinnacle prices attached:
+# a mix of flagged value bets and matches where model and market agree, across the big five leagues
+PREDICTIONS_SAMPLE = [("Leeds", "Newcastle"), ("Man Utd", "Man City"), ("Coventry", "Brighton"),
+                      ("Levante", "Barcelona"), ("Elche", "Real Madrid"), ("Celta Vigo", "Malaga"),
+                      ("Napoli", "Bologna"), ("Inter Milan", "Udinese"), ("Elversberg", "Bayern Munich"),
+                      ("Brest", "PSG"), ("Le Mans", "Lens")]
 
 
 def save(df, name):
@@ -58,7 +69,61 @@ def team_repeater_rates(min_matches=100):
     return rt[rt["matches"] >= min_matches]
 
 
+def epl_current_ratings():
+    """Current Premier League team ratings on all four metrics, as in the tc_scraper dashboard's Team ratings tab."""
+    sys.path.insert(0, str(TC))
+    sys.path.insert(0, str(TC / "dashboards"))
+    from rating_backtest_web import load_all_matches
+    from predictions.current_ratings import compute_current_team_ratings
+    from build_current_ratings import METRICS
+
+    cwd = os.getcwd()
+    os.chdir(TC)  # load_all_matches reads corner_matches_adjusted/ relative to tc_scraper
+    try:
+        all_matches = load_all_matches()
+    finally:
+        os.chdir(cwd)
+
+    rows = []
+    for metric, (home_col, away_col, allow_cross_league) in METRICS.items():
+        home, away = compute_current_team_ratings(
+            all_matches, window_size=RATINGS_WINDOW, min_periods=RATINGS_MIN_PERIODS,
+            home_col=home_col, away_col=away_col, allow_cross_league=allow_cross_league)
+        # raw/nr keep one row per league a team has played in; keep only the Premier League one
+        home = home[home["home_current_league"] == "EnglandPremierLeague"]
+        away = away[away["away_current_league"] == "EnglandPremierLeague"]
+        m = home.merge(away, on=["Team", "Country"])
+        m = m[m["Team"].isin(RATINGS_SAMPLE_TEAMS)]
+        m["metric"] = metric
+        rows.append(m)
+    out = pd.concat(rows)
+    out["order"] = out["Team"].map({t: i for i, t in enumerate(RATINGS_SAMPLE_TEAMS)})
+    assert out.groupby("Team").size().eq(len(METRICS)).all() and out["Team"].nunique() == len(RATINGS_SAMPLE_TEAMS)
+    return out.sort_values(["order", "metric"])[
+        ["Team", "metric", "home_corner_attack_rating", "home_corner_defense_rating",
+         "away_corner_attack_rating", "away_corner_defence_rating", "home_rating_as_of", "away_rating_as_of"]]
+
+
+def predictions_sample():
+    """A sample of the daily predictions file behind the tc_scraper dashboard's Predictions tab."""
+    pr = pd.read_csv(TC / "predictions" / "current_predictions.csv")
+    pr["order"] = pd.Series(list(zip(pr["Home"], pr["Away"]))).map({m: i for i, m in enumerate(PREDICTIONS_SAMPLE)})
+    pr = pr[pr["order"].notna() & pr["matched"]].sort_values("order")
+    assert len(pr) == len(PREDICTIONS_SAMPLE), "sample fixtures missing from current_predictions.csv"
+    return pr[["Date", "League", "Home", "Away", "adjsup", "predicted_home_corners", "predicted_away_corners",
+               "predicted_supremacy", "corner_supremacy", "diff_sup", "Corner Handicap",
+               "Home Handicap Corners Odds", "Away Handicap Corners Odds", "p_cover_home", "p_cover_away",
+               "ev_home", "ev_away", "value_bet"]]
+
+
 def main():
+    if sys.argv[1:] == ["ratings"]:  # rebuild only this snapshot
+        save(epl_current_ratings(), "epl_current_ratings.csv")
+        return
+    if sys.argv[1:] == ["predictions"]:
+        save(predictions_sample(), "predictions_sample.csv")
+        return
+
     print("Loading event data...")
     raw = pd.read_csv(PORTFOLIO_DATA / "corner_gamestate.csv")
     raw_events = raw[raw["matchid"] == SAMPLE_MATCH][["Minute", "Team", "Event"]]

@@ -14,7 +14,7 @@ import pandas as pd
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 from _charts import (load, show, table, code_link, pretty_league, STATE_COLORS, STATES, SHOWCASE_LEAGUES,
-                     ACCENT, MUTED, POS, NEG, TEXT_2)
+                     ACCENT, MUTED, POS, NEG, TEXT_2, GRID)
 
 EXCLUDED = {"ColombiaPrimeraA", "ColombiaPrimeraB", "EnglandLeague2"}  # no league/tier context yet
 
@@ -244,11 +244,10 @@ point of view, so a positive number means the team was the pre-match
 favourite.
 
 This is a snapshot of the effect that game state and supremacy can have
-on raw corner counts. Crystal Palace got 8 of their 9 corners during
-the 35 minutes they were losing. Tottenham, in a match
-they were big favourites, got all 13 of their corners during the 52
-minutes when they were drawing or losing, and 0 in the 45 minutes they
-were winning.
+on raw corner counts. Crystal Palace got 8 of their 9 corners during the
+35 minutes they were losing. Tottenham, in a match they were big
+favourites, got all 13 of their corners during the 52 minutes when they
+were drawing or losing, and 0 in the 45 minutes they were winning.
 
 These counts are aggregated at the league level in the analysis in
 section four to find base rates for different combinations of game state
@@ -305,9 +304,9 @@ code_link("code/repeaters.py#L13-L30", "Repeater detection: flag_repeaters()")
 ### Game state affects corner rates
 
 Teams that are behind attack more, so they win more corners. Teams that
-are ahead tend to sit deeper and win fewer. The chart shows the home side's
-share of all corners in each league, split by the game state at the
-time.
+are ahead tend to sit deeper and win fewer. The chart shows the home
+side's share of all corners in each league, split by the game state at
+the time.
 
 ```{python}
 share = load("gs_home_corner_share.csv")
@@ -545,7 +544,7 @@ match's betting lines.
 
 ## 5. Building and testing a predictive model
 
-### Do adjusted ratings predict better?
+### Adjusted ratings make better predictions
 
 Team attack and defence ratings are built as rolling averages over the
 last *N* games, using four metrics:
@@ -555,10 +554,34 @@ last *N* games, using four metrics:
 -   **adj**: adjusted values
 -   **adj_nr**: adjusted values with repeaters removed
 
+A rating of 1.00 means a team wins corners at the league-average rate
+for that venue. The table shows current attack ratings for a sample of
+Premier League teams on all four metrics, over a 25-game window:
+
+```{python}
+cr = load("epl_current_ratings.csv")
+cr_asof = pd.to_datetime(cr[["home_rating_as_of", "away_rating_as_of"]].stack()).max()
+metrics = ["raw", "nr", "adj", "adj_nr"]
+cr_view = pd.concat([
+    cr.pivot(index="Team", columns="metric", values=f"{side}_corner_attack_rating")[metrics]
+      .add_prefix(f"{side.capitalize()} ")
+    for side in ["home", "away"]], axis=1)
+cr_view = cr_view.loc[cr["Team"].unique()].reset_index()
+table(cr_view, floatfmt=".2f")
+```
+
+On raw counts, Man City, Liverpool, Arsenal and Chelsea look like the
+league's strongest corner-winning sides at home, at around 1.15 to 1.30.
+On the adjusted metrics they drop back to roughly 0.9 to 1.1, because
+most of their raw advantage is what their supremacy would already
+predict. Bournemouth and Newcastle stay near the top at home on every
+metric, so their corner numbers are not just a product of being
+favourites. Ratings as of `{python} f"{cr_asof.day} {cr_asof:%B %Y}"`.
+
 Each set of ratings, together with match supremacy, feeds an OLS model
-that predicts each side's corners in held-out matches. The chart shows
-the out-of-sample R² improvement over raw counts, for each window
-length.
+that predicts each side's corners for matches in the test dataset. The
+chart shows the out-of-sample R² improvement over raw counts, for each
+window length.
 
 ```{python}
 piv = rb.pivot_table(index=["side", "window_size"], columns="metric", values="r2_test").reset_index()
@@ -591,13 +614,7 @@ The adjusted metrics beat raw counts at every window length on both
 sides. The gain is largest for home corners, which are the most
 sensitive to game state. Removing repeaters from raw counts (nr) makes
 little difference on its own; almost all of the gain comes from the
-game-state and supremacy adjustment. The setting carried forward is
-**adj_nr over a 25-game window**, the strongest overall (adj is level
-with it on home corners): home R²
-`{python} f"{best.loc['home','r2_test']:.3f}"` vs
-`{python} f"{raw25.loc['home','r2_test']:.3f}"` raw, and away
-`{python} f"{best.loc['away','r2_test']:.3f}"` vs
-`{python} f"{raw25.loc['away','r2_test']:.3f}"`.
+game-state and supremacy adjustment.
 
 ::: {.callout-note appearance="simple"}
 R² values of around 0.1 are normal here. Match-level corner counts are
@@ -606,7 +623,7 @@ most of the variance. What matters for betting is whether the model
 beats the market's estimate, which is tested next.
 :::
 
-### Does it beat the market?
+### Beating the market
 
 The model's predicted corner supremacy (home minus away) is compared
 with Pinnacle's implied corner supremacy for every priced match in
@@ -633,13 +650,14 @@ show(fig)
 ```
 
 All `{python} n_combos` adjusted rating sets are profitable in the
-handicap market, at
-`{python} f"{roi_lo:.1f}"`--`{python} f"{roi_hi:.1f}"`% ROI on
-`{python} n_bets_lo`--`{python} n_bets_hi` bets each, after paying
-Pinnacle's margin.
+handicap market, at between
+`{python} f"{roi_lo:.1f}"`--`{python} f"{roi_hi:.1f}"`% ROI.
 
-**How the edge scales.** Raising the minimum disagreement before betting
-trades volume for conviction. For the adj_nr / 19-game ratings:
+### **How the edge scales**
+
+Raising the minimum threshold before betting shows the balance between
+ROI and volume. We are interested in finding the threshold that
+maximises units won.
 
 ```{python}
 cv = load("ev_variant_peak_pnl_curves.csv")
@@ -648,34 +666,43 @@ cv = cv[cv["n_bets"] >= 50]
 peak = cv.loc[cv["total_pnl"].idxmax()]
 breakeven = cv[cv["total_pnl"] > 0]["threshold"].min()
 
-fig = make_subplots(rows=1, cols=2, horizontal_spacing=0.1, subplot_titles=("Total profit (units)", "ROI"))
+fig = make_subplots(rows=1, cols=2, horizontal_spacing=0.14, subplot_titles=("Total profit (units)", "ROI"),
+                    specs=[[{"secondary_y": True}, {"secondary_y": True}]])
 hover = "Edge ≥ %{x:.2f} corners<br>%{customdata[0]:,} bets<br>Profit %{customdata[1]:+.1f}u · ROI %{customdata[2]:.1%}<extra></extra>"
 cd = cv[["n_bets", "total_pnl", "roi"]]
-fig.add_trace(go.Scatter(x=cv["threshold"], y=cv["total_pnl"], mode="lines", line=dict(color=ACCENT, width=2),
-                         customdata=cd, hovertemplate=hover, showlegend=False), row=1, col=1)
-fig.add_trace(go.Scatter(x=cv["threshold"], y=cv["roi"], mode="lines", line=dict(color=ACCENT, width=2),
-                         customdata=cd, hovertemplate=hover, showlegend=False), row=1, col=2)
+# Bet volume as bars behind each line. Plotly draws the secondary axis on top, so the bars take the
+# primary axis (shown on the right) and the lines the secondary axis (shown on the left).
+for col_i, ycol in ((1, "total_pnl"), (2, "roi")):
+    fig.add_trace(go.Bar(x=cv["threshold"], y=cv["n_bets"], name="Bets", legendgroup="bets", showlegend=(col_i == 1),
+                         marker=dict(color=MUTED, opacity=0.25), customdata=cd, hovertemplate=hover),
+                  row=1, col=col_i, secondary_y=False)
+    fig.add_trace(go.Scatter(x=cv["threshold"], y=cv[ycol], mode="lines", line=dict(color=ACCENT, width=2),
+                             customdata=cd, hovertemplate=hover, showlegend=False),
+                  row=1, col=col_i, secondary_y=True)
 fig.add_trace(go.Scatter(x=[peak["threshold"]], y=[peak["total_pnl"]], mode="markers+text",
                          marker=dict(color=ACCENT, size=9, line=dict(color="white", width=2)),
                          text=[f"peak {peak['total_pnl']:.0f}u at ≥{peak['threshold']:.2f}"], textposition="top right",
-                         textfont=dict(color=TEXT_2, size=11), hoverinfo="skip", showlegend=False), row=1, col=1)
+                         textfont=dict(color=TEXT_2, size=11), hoverinfo="skip", showlegend=False),
+              row=1, col=1, secondary_y=True)
 fig.update_xaxes(title="Minimum model–market disagreement (corners)")
-fig.update_yaxes(tickformat=".0%", row=1, col=2)
-fig.update_yaxes(zeroline=True, zerolinecolor=MUTED)
-fig.update_layout(height=380)
+fig.update_yaxes(side="left", tickmode="auto", zeroline=True, zerolinecolor=MUTED, gridcolor=GRID, secondary_y=True)
+fig.update_yaxes(tickformat=".0%", row=1, col=2, secondary_y=True)
+fig.update_yaxes(side="right", showgrid=False, zeroline=False, tickformat=",", rangemode="tozero",
+                 title=dict(text="Bets", font=dict(color=TEXT_2, size=11)), secondary_y=False)
+fig.update_layout(height=400, bargap=0.15, legend=dict(orientation="h", y=-0.3, x=0))
 fig.update_annotations(font=dict(size=13, color=TEXT_2))
 show(fig)
 ```
 
-Betting every match loses money: Pinnacle is sharp on average. Once the
-model disagrees by `{python} f"{breakeven:.2f}"` corners or more, profit
-becomes positive. It peaks at **`{python} f"{peak['total_pnl']:.0f}"`
-units** at a `{python} f"{peak['threshold']:.2f}"`-corner threshold. ROI
-rises broadly as the threshold tightens, which is the pattern you'd
-expect if the edge is real. Above about 1.2 corners it gets noisy,
-because there are only a few hundred bets left. The 0.5 threshold used
-above was chosen on this same data, so treat the peak as optimistic. The
-steady rise in ROI is the more reliable evidence.
+Betting every match loses money. Once the model disagrees by
+`{python} f"{breakeven:.2f}"` corners or more, profit becomes positive.
+It peaks at **`{python} f"{peak['total_pnl']:.0f}"` units** at a
+`{python} f"{peak['threshold']:.2f}"`-corner threshold. ROI rises
+broadly as the threshold tightens, which is the pattern you'd expect if
+the edge is real. Above about 1.2 corners it gets noisy, because there
+are only a few hundred bets left. The 0.5 threshold used above was
+chosen on this same data, so treat the peak as optimistic. The steady
+rise in ROI is the more reliable evidence.
 
 **The totals market is different.** The same ratings were backtested
 against Pinnacle's corner over/under lines, and every metric/window
@@ -696,6 +723,45 @@ negative. See the [methodology](methodology.qmd) page for caveats.
 ::: {.callout-note appearance="simple"}
 This section is being written.
 :::
+
+Each day the pipeline rebuilds the ratings, predicts corners for
+upcoming fixtures and joins the predictions to Pinnacle's live corner
+handicap prices. A bet is flagged when the model's corner supremacy
+differs from Pinnacle's by at least 0.5 corners, the threshold tested
+in section 5, or when the expected value on one side is at least 8%.
+A sample from one weekend in September 2026:
+
+```{python}
+ps = load("predictions_sample.csv")
+home_bet = ps["value_bet"] == "home"
+bet_line = ps["Corner Handicap"].where(home_bet, -ps["Corner Handicap"])
+ps_view = pd.DataFrame({
+    "Date": pd.to_datetime(ps["Date"]).dt.strftime("%d %b"),
+    "League": ps["League"].map(pretty_league),
+    "Match": ps["Home"] + " v " + ps["Away"],
+    "Model sup": ps["predicted_supremacy"],
+    "Pinnacle sup": ps["corner_supremacy"],
+    "Difference": ps["diff_sup"],
+    "Bet": (ps["Home"].where(home_bet, ps["Away"]) + " " + bet_line.map(lambda v: f"{v:+.1f}" if v else "0.0")).where(ps["value_bet"].notna(), "–"),
+    "Odds": ps["Home Handicap Corners Odds"].where(home_bet, ps["Away Handicap Corners Odds"]),
+    "P(cover)": ps["p_cover_home"].where(home_bet, ps["p_cover_away"]),
+    "EV": ps["ev_home"].where(home_bet, ps["ev_away"]),
+})
+no_bet = ps["value_bet"].isna()
+ps_view[["Odds", "P(cover)", "EV"]] = ps_view[["Odds", "P(cover)", "EV"]].astype(object)
+ps_view.loc[no_bet, ["Odds", "P(cover)", "EV"]] = "–"
+ps_view.loc[~no_bet, "Odds"] = ps_view.loc[~no_bet, "Odds"].map(lambda v: f"{v:.2f}")
+for c in ["P(cover)", "EV"]:
+    ps_view.loc[~no_bet, c] = ps_view.loc[~no_bet, c].map(lambda v: f"{v:.0%}")
+table(ps_view, floatfmt=".2f")
+```
+
+Supremacy is home corners minus away corners, and the difference is the
+model minus Pinnacle. P(cover) is the model's probability that the bet
+wins, with each side's corners treated as an independent Poisson count
+around its prediction, and EV is the expected return per unit staked at
+Pinnacle's odds. Where the model and the market agree, as in Napoli v
+Bologna or Inter Milan v Udinese, there's no bet.
 
 ### Limitations and next steps
 
