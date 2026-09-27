@@ -762,7 +762,6 @@ differs from Pinnacle's by at least 0.5 corners, the threshold tested in
 section 5. A sample from one weekend in September 2026:
 
 ```{python}
-#| column: page-left
 ps = load("predictions_sample.csv").sort_values(["Date", "League"])
 
 def _num(v, signed=False):
