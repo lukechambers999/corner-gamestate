@@ -544,20 +544,23 @@ match's betting lines.
 
 ## 5. Building and testing a predictive model
 
-### Adjusted ratings make better predictions
+### Building adjusted corner ratings
 
 Team attack and defence ratings are built as rolling averages over the
-last *N* games, using four metrics:
+last *N* games, divided by the average for the league over the same
+period to give a ratio.
+
+Four metrics were tested:
 
 -   **raw**: raw corner counts
 -   **nr**: raw counts with repeaters removed
--   **adj**: adjusted values
--   **adj_nr**: adjusted values with repeaters removed
+-   **adj**: adjusted corner values
+-   **adj_nr**: adjusted corner values with repeaters removed
 
 The table shows current ratings for every Premier League team on each
-metric. A rating of 1.00 is league average for that venue. Higher attack
-means a team wins more corners, and higher defence means it concedes
-more. Use the buttons to switch metric, and click a column to sort.
+metric. A rating of 1.00 is league average. Higher attack means a team
+wins more corners, and higher defence means it concedes more. Use the
+buttons to switch metric, and click a column to sort.
 
 ```{python}
 import json
@@ -615,19 +618,19 @@ HTML("""
 """ % (json.dumps(cr_data), json.dumps(sorted(cr["Team"].unique()))))
 ```
 
-On raw counts, Man City, Chelsea, Liverpool and Arsenal all have home
-attack ratings above 1.1. On the adjusted metrics Liverpool and Arsenal
-drop to around 1.0 or below, and Man City and Chelsea to about 1.1,
-because most of their raw advantage is what their supremacy would
-already predict. Leeds, Fulham and Bournemouth move the other way: they
-win more home corners than their supremacy and game states would
-suggest. Ratings use a 19-game window, the same as the live model, and
-are as of `{python} f"{cr_asof.day} {cr_asof:%B %Y}"`.
+On raw counts, Man City, Chelsea and Liverpool have the highest home
+attack ratings. However on the adj metric Bournemouth, Newcastle and
+Leeds top the list. This shows much of the big clubs' raw advantage
+comes from being favourites and the adjustment strips that out.
+
+Ratings use a 19-game window, the same as the live model, and are as of
+`{python} f"{cr_asof.day} {cr_asof:%B %Y}"`.
+
+### Adjusted ratings make better predictions
 
 Each set of ratings, together with match supremacy, feeds an OLS model
 that predicts each side's corners for matches in the test dataset. The
-chart shows the out-of-sample R² improvement over raw counts, for each
-window length.
+chart shows the R² improvement over raw counts, for each window length.
 
 ```{python}
 piv = rb.pivot_table(index=["side", "window_size"], columns="metric", values="r2_test").reset_index()
@@ -659,25 +662,24 @@ raw25 = rb[(rb["metric"] == "raw") & (rb["window_size"] == 25)].set_index("side"
 The adjusted metrics beat raw counts at every window length on both
 sides. The gain is largest for home corners, which are the most
 sensitive to game state. Removing repeaters from raw counts (nr) makes
-little difference on its own; almost all of the gain comes from the
-game-state and supremacy adjustment.
+little difference on its own by this metric; almost all of the gain
+comes from the game-state and supremacy adjustment.
 
 ::: {.callout-note appearance="simple"}
 R² values of around 0.1 are normal here. Match-level corner counts are
 dominated by Poisson-like randomness, so no pre-match model explains
 most of the variance. What matters for betting is whether the model
-beats the market's estimate, which is tested next.
+beats the market, which is tested next.
 :::
 
 ### Beating the market
 
-The model's predicted corner supremacy (home minus away) is compared
-with Pinnacle's implied corner supremacy for every priced match in
-2024/25 and 2025/26. The prediction model is fitted only on earlier
-seasons, and ratings use only matches played before each fixture. When
-the two differ by 0.5 corners or more, a 1-unit bet goes on the side the
-model prefers, at Pinnacle's price. Every bet is settled on actual raw
-corners.
+The model's predicted corner supremacy is compared with Pinnacle's
+implied corner supremacy for every priced match in 2024/25 and 2025/26.
+The prediction model is fitted only on earlier seasons, and ratings use
+only matches played before each fixture. When the two differ by 0.5
+corners or more, a 1-unit bet goes on the side the model prefers, at
+Pinnacle's price. Every bet is settled on actual raw corners.
 
 ```{python}
 bg = bets_g.sort_values("total_pnl", ascending=False)
@@ -739,12 +741,10 @@ show(fig)
 Betting every match loses money. Once the model disagrees by
 `{python} f"{breakeven:.2f}"` corners or more, profit becomes positive.
 It peaks at **`{python} f"{peak['total_pnl']:.0f}"` units** at a
-`{python} f"{peak['threshold']:.2f}"`-corner threshold. ROI rises
-broadly as the threshold tightens, which is the pattern you'd expect if
-the edge is real. Above about 1.2 corners it gets noisy, because there
-are only a few hundred bets left. The 0.5 threshold used above was
-chosen on this same data, so treat the peak as optimistic. The steady
-rise in ROI is the more reliable evidence.
+`{python} f"{peak['threshold']:.2f}"`-corner threshold. ROI rises as the
+threshold increases, however overall units won falls as in fewer bets
+are being placed. Above 1.2 corners the ROI projections gets noisy,
+because there are much fewer bets.
 
 **The totals market is different.** The same ratings were backtested
 against Pinnacle's corner over/under lines, and every metric/window
@@ -753,47 +753,33 @@ combination lost money. My working hypothesis is that game state shifts
 corners there are in total, so correcting for it helps the handicap
 market and doesn't help totals.
 
-::: {.callout-warning appearance="simple"}
-This is a backtest over roughly two seasons on historical prices. Bets
-aren't guaranteed to have been available at those odds or stakes, and
-results vary by league: some are consistently profitable, others
-negative. See the [methodology](methodology.qmd) page for caveats.
-:::
-
 ## 6. Running the model in real time
-
-::: {.callout-note appearance="simple"}
-This section is being written.
-:::
 
 Each day the pipeline rebuilds the ratings, predicts corners for
 upcoming fixtures and joins the predictions to Pinnacle's live corner
 handicap prices. A bet is flagged when the model's corner supremacy
 differs from Pinnacle's by at least 0.5 corners, the threshold tested in
-section 5, or when the expected value on one side is at least 8%. A
-sample from one weekend in September 2026:
+section 5. A sample from one weekend in September 2026:
 
 ```{python}
+#| column: page-left
 ps = load("predictions_sample.csv").sort_values(["Date", "League"])
 
 def _num(v, signed=False):
     return "–" if pd.isna(v) else (f"{v:+.2f}" if signed and v > 0 else f"{v:.2f}")
 
-cols = ["Date", "League", "Home", "Away", "Adjsup", "H Pred", "A Pred", "Pred Tot", "Pred Sup",
-        "Pin Tot", "Pin Sup", "Diff Tot", "Diff Sup", "EV", "P(cover)", "Value"]
+cols = ["Date", "League", "Home", "Away", "Pred Tot", "Pred Sup",
+        "Pin Tot", "Pin Sup", "Diff Tot", "Diff Sup", "EV", "Value"]
 rows = []
 for r in ps.itertuples():
     side = r.value_bet if isinstance(r.value_bet, str) else ""
     ev = getattr(r, f"ev_{side}") if side else None
-    pc = getattr(r, f"p_cover_{side}") if side else None
     cells = [f'<td class="text">{pd.Timestamp(r.Date):%d %b}</td>', f'<td class="text">{pretty_league(r.League)}</td>',
              f'<td class="text">{r.Home}</td>', f'<td class="text">{r.Away}</td>']
-    cells += [f"<td>{_num(v)}</td>" for v in (r.adjsup, r.predicted_home_corners, r.predicted_away_corners,
-                                              r.predicted_total, r.predicted_supremacy, r.corner_total,
+    cells += [f"<td>{_num(v)}</td>" for v in (r.predicted_total, r.predicted_supremacy, r.corner_total,
                                               r.corner_supremacy)]
     cells += [f"<td>{_num(r.diff_total, True)}</td>", f"<td>{_num(r.diff_sup, True)}</td>",
               f"<td>{side[0].upper() + ' ' + _num(ev, True) if side else '–'}</td>",
-              f"<td>{f'{pc:.0%}' if side else '–'}</td>",
               f'<td>{f"<span class=status-badge>{side.upper()}</span>" if side else ""}</td>']
     rows.append(f'<tr class="{"value-row" if side else ""}">{"".join(cells)}</tr>')
 HTML('<div class="dash-table-wrap"><table class="dash-table"><thead><tr>'
@@ -803,32 +789,9 @@ HTML('<div class="dash-table-wrap"><table class="dash-table"><thead><tr>'
 
 Pred is the model's predicted corners and Pin is Pinnacle's implied
 line; supremacy (Sup) is home corners minus away corners, and Diff is
-the model minus Pinnacle. Adjsup is the match's expected goal
-supremacy, taken from the pre-match goal markets. For a flagged bet, EV is the
-expected return per unit staked on that side (H or A) at Pinnacle's
-handicap odds, and P(cover) is the model's probability that the bet
-wins, with each side's corners treated as an independent Poisson count
-around its prediction. Where the model and the market agree, as in
+the model minus Pinnacle. For a flagged bet, EV is the expected return
+per unit staked on that side (H or A) at Pinnacle's handicap odds, with
+each side's corners treated as an independent Poisson count around its
+prediction. Where the model and the market agree, as in
 Hajduk Split v Slaven Belupo or FCSB v Petrolul Ploiesti, there's no
 bet.
-
-### Limitations and next steps
-
--   **Match length is estimated.** The source data doesn't record
-    stoppage time, so match length is taken as the later of 97 minutes
-    and the last recorded event. Better data would improve the minute
-    counts.
--   **Other in-game factors aren't modelled yet.** Red cards and the
-    *timing* of each game state (the effects grow as the match goes on)
-    are obvious next adjustments.
--   **Out-of-game factors aren't modelled either.** Manager changes,
-    transfers and end-of-season motivation aren't captured beyond what
-    the rolling window picks up.
--   **No player-level data.** Lineup-aware ratings would help with
-    injuries and rotation.
--   **Data quality.** Some team names are split across different
-    spellings in lower leagues, which affects rolling windows for the
-    teams involved. Three leagues are excluded until they're given
-    league/tier context.
--   **Bet sizing.** All backtests use flat 1-unit stakes. Kelly-style
-    sizing based on the size of the disagreement is untested.
