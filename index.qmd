@@ -742,8 +742,8 @@ Betting every match loses money. Once the model disagrees by
 `{python} f"{breakeven:.2f}"` corners or more, profit becomes positive.
 It peaks at **`{python} f"{peak['total_pnl']:.0f}"` units** at a
 `{python} f"{peak['threshold']:.2f}"`-corner threshold. ROI rises as the
-threshold increases, however overall units won falls as in fewer bets
-are being placed. Above 1.2 corners the ROI projections gets noisy,
+threshold increases, however overall units won falls as fewer bets
+are being placed. Above 1.2 corners the ROI projections get noisy,
 because there are much fewer bets.
 
 **The totals market is different.** The same ratings were backtested
