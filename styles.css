@@ -132,10 +132,12 @@ table {
   border-radius: 10px;
   padding: 6px 8px;
   margin: 0.6rem 0 1rem;
+  width: fit-content;
+  max-width: 100%;
 }
 
 table.dash-table {
-  width: 100%;
+  width: auto;
   border-collapse: collapse;
   font-size: 12.5px;
   color: #0b0b0b;
@@ -148,15 +150,14 @@ table.dash-table th {
   color: #52514e;
   font-size: 11px;
   text-transform: uppercase;
-  letter-spacing: 0.03em;
-  padding: 8px 6px;
+  padding: 8px 4px;
   border-bottom: 1px solid #e1e0d9;
   white-space: nowrap;
 }
 
 table.dash-table td {
   text-align: right;
-  padding: 6px 6px;
+  padding: 6px 4px;
   border-bottom: 1px solid #e1e0d9;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
@@ -184,16 +185,4 @@ table.dash-table tbody tr.value-row:hover { background: rgba(12, 163, 12, 0.20);
 table.dash-table > tbody > tr > * {
   background: transparent;
   box-shadow: none;
-}
-
-/* On wide screens the left margin is empty, so let the wide predictions table extend into it */
-@media (min-width: 1400px) {
-  .cell-output-display:has(> .dash-table-wrap) {
-    overflow: visible;
-  }
-
-  .dash-table-wrap {
-    width: calc(100% + 300px);
-    margin-left: -300px;
-  }
 }
