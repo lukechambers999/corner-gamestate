@@ -56,16 +56,6 @@ excluded from fitting.
 - **Totals:** corner over/under was backtested with the same set-up and lost
   money in every configuration. It's no longer part of the live model.
 
-## Data caveats
-
-- Match and half lengths aren't in the source data, so minutes in each state are estimates.
-- Some lower-league clubs appear under several spellings across seasons,
-  which splits their rolling windows. This hasn't been fixed at source yet.
-- Colombia Primera A/B and England League Two are excluded until they are
-  given league/tier context.
-- The number of matches with odds available varies by league, and so does the ROI.
-  Per-league results are noisy, and the combined figures are the ones to rely on.
-
 ## Code
 
 The processing code for the original study is in the
