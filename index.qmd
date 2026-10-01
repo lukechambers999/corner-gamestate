@@ -60,8 +60,8 @@ won and builds team ratings from the adjusted values.
 :::
 
 ::: stat
-[+`{python} f"{roi_lo:.1f}"`--`{python} f"{roi_hi:.1f}"`%]{.num}
-[handicap ROI, every tested rating set]{.lbl}
+[`{python} f"{roi_hi:.1f}"`%]{.num}
+[ROI on corner handicap markets]{.lbl}
 :::
 :::
 
@@ -757,21 +757,24 @@ Each day the pipeline rebuilds the ratings, predicts corners for
 upcoming fixtures and joins the predictions to Pinnacle's live corner
 handicap prices. A bet is flagged when the model's corner supremacy
 differs from Pinnacle's by at least 0.5 corners, the threshold tested in
-section 5. A sample from one weekend in September 2026:
+section 5. A sample from one weekend in September 2026 (kick-off times
+are UK time):
 
 ```{python}
-ps = load("predictions_sample.csv").sort_values(["Date", "League"])
+ps = load("predictions_sample.csv").sort_values(["Kickoff", "League"])
 
 def _num(v, signed=False):
     return "–" if pd.isna(v) else (f"{v:+.2f}" if signed and v > 0 else f"{v:.2f}")
 
-cols = ["Date", "League", "Home", "Away", "Pred Tot", "Pred Sup",
+cols = ["Date", "Time", "League", "Home", "Away", "Pred Tot", "Pred Sup",
         "Pin Tot", "Pin Sup", "Diff Tot", "Diff Sup", "EV", "Value"]
 rows = []
 for r in ps.itertuples():
     side = r.value_bet if isinstance(r.value_bet, str) else ""
     ev = getattr(r, f"ev_{side}") if side else None
-    cells = [f'<td class="text">{pd.Timestamp(r.Date):%d %b}</td>', f'<td class="text">{pretty_league(r.League)}</td>',
+    ko = pd.Timestamp(r.Kickoff)
+    cells = [f'<td class="text">{ko:%d %b}</td>', f'<td class="text">{ko:%H:%M}</td>',
+             f'<td class="text">{pretty_league(r.League)}</td>',
              f'<td class="text">{r.Home}</td>', f'<td class="text">{r.Away}</td>']
     cells += [f"<td>{_num(v)}</td>" for v in (r.predicted_total, r.predicted_supremacy, r.corner_total,
                                               r.corner_supremacy)]
@@ -780,7 +783,7 @@ for r in ps.itertuples():
               f'<td>{f"<span class=status-badge>{side.upper()}</span>" if side else ""}</td>']
     rows.append(f'<tr class="{"value-row" if side else ""}">{"".join(cells)}</tr>')
 HTML('<div class="dash-table-wrap"><table class="dash-table"><thead><tr>'
-     + "".join(f'<th class="{"text" if c in ("Date", "League", "Home", "Away") else ""}">{c}</th>' for c in cols)
+     + "".join(f'<th class="{"text" if c in ("Date", "Time", "League", "Home", "Away") else ""}">{c}</th>' for c in cols)
      + "</tr></thead><tbody>" + "".join(rows) + "</tbody></table></div>")
 ```
 
