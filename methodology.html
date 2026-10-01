@@ -173,7 +173,6 @@ window.Quarto = {
   <li><a href="#definitions" id="toc-definitions" class="nav-link active" data-scroll-target="#definitions">Definitions</a></li>
   <li><a href="#ratings-and-prediction" id="toc-ratings-and-prediction" class="nav-link" data-scroll-target="#ratings-and-prediction">Ratings and prediction</a></li>
   <li><a href="#betting-backtest" id="toc-betting-backtest" class="nav-link" data-scroll-target="#betting-backtest">Betting backtest</a></li>
-  <li><a href="#data-caveats" id="toc-data-caveats" class="nav-link" data-scroll-target="#data-caveats">Data caveats</a></li>
   <li><a href="#code" id="toc-code" class="nav-link" data-scroll-target="#code">Code</a></li>
   </ul>
 </nav>
@@ -229,15 +228,6 @@ window.Quarto = {
 <li><strong>Selection:</strong> a 1-unit bet on the side the model prefers when the two differ by 0.5 corners or more (a threshold sweep is shown in the analysis).</li>
 <li><strong>Settlement:</strong> actual raw corners at Pinnacle’s quoted odds, including quarter-line half-win and half-loss handling and pushes on whole lines.</li>
 <li><strong>Totals:</strong> corner over/under was backtested with the same set-up and lost money in every configuration. It’s no longer part of the live model.</li>
-</ul>
-</section>
-<section id="data-caveats" class="level2">
-<h2 class="anchored" data-anchor-id="data-caveats">Data caveats</h2>
-<ul>
-<li>Match and half lengths aren’t in the source data, so minutes in each state are estimates.</li>
-<li>Some lower-league clubs appear under several spellings across seasons, which splits their rolling windows. This hasn’t been fixed at source yet.</li>
-<li>Colombia Primera A/B and England League Two are excluded until they are given league/tier context.</li>
-<li>The number of matches with odds available varies by league, and so does the ROI. Per-league results are noisy, and the combined figures are the ones to rely on.</li>
 </ul>
 </section>
 <section id="code" class="level2">

@@ -28,13 +28,6 @@
     "text": "Betting backtest\n\nTest period: 2024/25 and 2025/26. The OLS model is fitted only on earlier seasons, and predictions are rescaled to the test period’s league corner level.\nMarket: Pinnacle Asian corner handicap. Its implied corner supremacy is compared with the model’s predicted home-minus-away corners.\nSelection: a 1-unit bet on the side the model prefers when the two differ by 0.5 corners or more (a threshold sweep is shown in the analysis).\nSettlement: actual raw corners at Pinnacle’s quoted odds, including quarter-line half-win and half-loss handling and pushes on whole lines.\nTotals: corner over/under was backtested with the same set-up and lost money in every configuration. It’s no longer part of the live model."
   },
   {
-    "objectID": "methodology.html#data-caveats",
-    "href": "methodology.html#data-caveats",
-    "title": "Methodology",
-    "section": "Data caveats",
-    "text": "Data caveats\n\nMatch and half lengths aren’t in the source data, so minutes in each state are estimates.\nSome lower-league clubs appear under several spellings across seasons, which splits their rolling windows. This hasn’t been fixed at source yet.\nColombia Primera A/B and England League Two are excluded until they are given league/tier context.\nThe number of matches with odds available varies by league, and so does the ROI. Per-league results are noisy, and the combined figures are the ones to rely on."
-  },
-  {
     "objectID": "methodology.html#code",
     "href": "methodology.html#code",
     "title": "Methodology",
