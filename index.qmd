@@ -39,11 +39,11 @@ med_spread = (_sh["trailing"] - _sh["leading"]).median()
 
 ::: lede
 Corner betting markets rate teams on how many corners they win and
-concede. But the number of corners a team takes depends a lot on the
-scoreline and on how strong the opponent is, and over a short run of
-fixtures those two things skew the raw counts. This project removes that
-bias by valuing every corner in the context it was won and builds team
-ratings from the adjusted values.
+concede. But the number of corners a team gets in any given match
+depends a lot on the scoreline and on how strong the opponent is, and
+over a short run of fixtures those two things skew the raw counts. This
+project removes that bias by valuing every corner in the context it was
+won and builds team ratings from the adjusted values.
 :::
 
 ::: stat-row
@@ -67,20 +67,21 @@ ratings from the adjusted values.
 
 **Summary**
 
--   Game state has a large effect on corners. In the median league, the
-    home side's share of corners is `{python} f"{med_spread:.0f}"`
-    points higher when losing than when winning.
+-   Game state has a large effect on corners. Across the 45 leagues
+    modelled the median league, the home side's share of corners is
+    `{python} f"{med_spread:.0f}"` points higher when losing than when
+    winning.
 -   Over short time periods, teams can spend disproportionate amounts of
     time in winning or losing positions, so raw corner counts become
     skewed by game state effects.
--   Valuing each corner by its game state, its home/away context and the
+-   Valuing each corner by its game state, its home/away context, the
     pre-match supremacy, and dropping "repeater" corners, gives ratings
     that predict future corners better than raw counts do at every
     window length tested.
 -   Against real Pinnacle prices, the adjusted ratings are profitable in
-    the **corner handicap market** across all 8 rating sets tested. The
+    the **corner handicap** market across all 8 rating sets tested. The
     best rating set had an ROI of 4.1% across 3,486 bets during the
-    testing window. They show **no edge in predicting corner totals**.
+    testing window. They show no edge in predicting **corner totals**.
 -   The optimal ratings framework derived from this testing now powers
     an active betting model. An automated workflow scrapes upcoming
     fixtures, derives current team ratings, makes predictions and
@@ -89,9 +90,9 @@ ratings from the adjusted values.
 
 ## 2. The data
 
-Two scrapers feed the model. Each runs automatically every day on GitHub
-Actions. The raw output is archived, and the processing stages read from
-there.
+Two scrapers feed the model. Each runs automatically every day through a
+cloud based automated workflow. The raw output is archived, and the
+processing stages read from there.
 
 ### totalcorner.com: match events
 
@@ -109,8 +110,8 @@ Results are stored in a local database and exported as one CSV per
 league. The same scraper also collects upcoming fixtures for the live
 model.
 
-A sample of the raw output (one row per event) for Aston Villa 2--0 West
-Ham on 22 March 2026. It shows 10 of the 34 columns:
+A sample of columns (10/34) from the raw output (one row per event) for
+Aston Villa 2--0 West Ham on 22 March 2026.
 
 ```{python}
 tc = load("sample_totalcorner_events.csv", dtype=str)
@@ -123,19 +124,19 @@ table(tc_view)
 every match. From this we can work out how long each team spent winning,
 drawing and losing, and which game state each corner was won in. The
 pre-match handicap and goal lines are converted into each match's
-expected goals and **supremacy** (the expected goal difference), a
-market-implied measure of the relative strength of each team.
+expected **goals** and **supremacy**, a market-implied measure of the
+relative strength of each team.
 
 ```{python}
 code_link("code/odds_to_goals.py", "Odds to expected goals and supremacy")
 ```
 
-**Why it's useful.** Most corner data only gives team and match totals.
-That can't tell you whether a team's corners came while chasing a game
-or while protecting a lead. The minute-by-minute timeline is what makes
-the game-state adjustments possible, and its coverage of second-tier
-leagues means promoted and relegated teams can be tracked across
-divisions.
+**Why it's useful.** Most data sources only contain team and match
+totals. That can't tell you whether a team's corners came while chasing
+a game or while protecting a lead. The minute-by-minute timeline is what
+makes the game-state adjustments possible, and its coverage of
+second-tier leagues means promoted and relegated teams can be tracked
+across divisions.
 
 ### Pinnacle: corner market prices
 
@@ -146,12 +147,12 @@ pin_last = pd.to_datetime(pc["last"]).strftime("%B %Y")
 pin_n = f"{pc['matches']:,}"
 ```
 
-The second scraper visits Pinnacle once a day and records prices for
-every fixture in the next seven days: match result, Asian handicap, goal
-line, and the two corner markets (**corner handicap** and **corner
-totals**). A processing step then removes Pinnacle's margin and fits a
-Poisson distribution (totals) and a Skellam distribution (handicap) to
-find the implied corner total and supremacy.
+Another scraper pulls Pinnacle prices once a day for every fixture in
+the next seven days.This includes Asian handicap lines, goal lines, as
+well as **corner handicap** and **corner totals**. A processing step
+removes Pinnacle's margin and fits a Poisson distribution (totals) and a
+Skellam distribution (handicap) to find the implied corner total and
+supremacy.
 
 The archive covers `{python} pin_n` matches scraped since
 `{python} pin_first`.
@@ -178,19 +179,16 @@ table(pin_view, floatfmt=".2f")
 model has to beat. In the backtest, the model's predicted supremacy is
 compared with Pinnacle's for each match. When the two disagree by a
 specific threshold, a one unit bet is placed at Pinnacle's quoted odds
-and settled on the actual corners. In the live model, the same
+and settled on the actual outcome. In the live model, the same
 comparison flags value bets on upcoming fixtures.
 
 **Why it's useful.** Pinnacle is widely regarded as the sharpest
-bookmaker. It runs low margins, and is known for not restricting winning
-customers, so its prices are the best estimate of the "true" market
-view. Generally, a model that beats Pinnacle has found a real edge
-rather than just a soft bookmaker. It is also the only bookmaker I have
-an active account with so if I want to build a model that can be
-profitable in real time it will need to beat Pinnacle lines.
-
-Team and league names are spelled differently on the two sites, so a
-name-mapping table joins them.
+bookmaker - it runs low margins and doesn't restrict winning customers,
+so its prices are the best estimate of the "true" market view.
+Generally, a model that beats Pinnacle has found a real edge rather than
+just a soft bookmaker. It is also the only bookmaker I have an active
+account with so if I want to build a model that can be profitable in
+real time it will need to beat Pinnacle lines.
 
 ## 3. Data processing
 
@@ -249,8 +247,8 @@ on raw corner counts. Crystal Palace got 8 of their 9 corners during the
 favourites, got all 13 of their corners during the 52 minutes when they
 were drawing or losing, and 0 in the 45 minutes they were winning.
 
-These counts are aggregated at the league level in the analysis in
-section four to find base rates for different combinations of game state
+These counts are aggregated at the league level in the section four
+analysis four to find base rates for every combinations of game state
 and supremacy. They also provide the context we need to make game state
 and supremacy adjusted team ratings.
 
@@ -341,13 +339,13 @@ prevalence of away fans and the role of dominant teams in each league
 all play a part in explaining these disparities. **Any adjustment has to
 be league-specific.**
 
-### Short runs of games distort the picture
+### Short runs of games can distort raw corner counts
 
 If every team's game state minutes were proportionate to their
-underlying strength, game state biases less prevalent in the raw counts.
-However, football matches are messy and chaotic and, especially over
-short samples of games, teams spending disproportionate amounts of
-minutes in different game states can distort corner rates.
+underlying strength, game state biases woul be less prevalent in the raw
+counts. However, football matches are messy and chaotic, and over short
+samples of games teams spend disproportionate amounts of time in game
+states that do not reflect their underlying strength.
 
 The left panel shows how long each Premier League side *should* have
 spent winning, drawing and losing over the first nine games of 2023/24,
@@ -525,21 +523,21 @@ Raw corners: Rayo Vallecano
 Adjusted: Rayo Vallecano
 **`{python} f"{rv.adj:.2f}"`--`{python} f"{ba.adj:.2f}"`** Barcelona.
 
-Once you account for the relative strength of the teams and Barcelona
-chasing the game for more than 50 minutes, Rayo's corner performance
-looks more impressive than Barcelona's, even with two of their repeater
-corners removed.
+Once you account for the relative strength of the teams and the game
+state effect - Barcelona chasing the game for more than 50 minutes,
+Rayo's corner performance looks more impressive than Barcelona's, even
+with two of their repeater corners removed.
 
 ```{python}
 code_link("code/adjusted_values.py", "Buckets, fitted lines and adjusted values")
 ```
 
 Because supremacy is stripped out of each corner's value, a team's
-rating no longer depends much on *who* it has played. That means shorter
-rating windows can be used, so changes of manager or personnel show up
-sooner. It also means promoted and relegated teams carry their ratings
-between divisions without special handling. The prediction model then
-adds supremacy back in as a separate input, taken from the upcoming
+rating no longer depends as much on *who* it has played. That means
+shorter rating windows can be used, so changes of manager or personnel
+show up sooner. It also means promoted and relegated teams carry their
+ratings between divisions without special handling. The prediction model
+then adds supremacy back in as a separate input, taken from the upcoming
 match's betting lines.
 
 ## 5. Building and testing a predictive model
@@ -548,7 +546,7 @@ match's betting lines.
 
 Team attack and defence ratings are built as rolling averages over the
 last *N* games, divided by the average for the league over the same
-period to give a ratio.
+period to give a ratio. The average ratio for the league is 1.00.
 
 Four metrics were tested:
 
@@ -558,9 +556,9 @@ Four metrics were tested:
 -   **adj_nr**: adjusted corner values with repeaters removed
 
 The table shows current ratings for every Premier League team on each
-metric. A rating of 1.00 is league average. Higher attack means a team
-wins more corners, and higher defence means it concedes more. Use the
-buttons to switch metric, and click a column to sort.
+metric. Higher attack means a team wins more corners, and higher defence
+means it concedes more. Use the buttons to switch metric, and click a
+column to sort.
 
 ```{python}
 import json
@@ -679,7 +677,7 @@ implied corner supremacy for every priced match in 2024/25 and 2025/26.
 The prediction model is fitted only on earlier seasons, and ratings use
 only matches played before each fixture. When the two differ by 0.5
 corners or more, a 1-unit bet goes on the side the model prefers, at
-Pinnacle's price. Every bet is settled on actual raw corners.
+Pinnacle's price. Every bet is settled on actual corner outcomes.
 
 ```{python}
 bg = bets_g.sort_values("total_pnl", ascending=False)
@@ -739,12 +737,12 @@ show(fig)
 ```
 
 Betting every match loses money. Once the model disagrees by
-`{python} f"{breakeven:.2f}"` corners or more, profit becomes positive.
-It peaks at **`{python} f"{peak['total_pnl']:.0f}"` units** at a
+`{python} f"{breakeven:.2f}"` corners or more, ROI becomes positive. It
+peaks at **`{python} f"{peak['total_pnl']:.0f}"` units** at a
 `{python} f"{peak['threshold']:.2f}"`-corner threshold. ROI rises as the
-threshold increases, however overall units won falls as fewer bets
-are being placed. Above 1.2 corners the ROI projections get noisy,
-because there are much fewer bets.
+threshold increases, however overall units won falls as fewer bets are
+being placed. Above 1.2 corners the ROI projections get noisy, because
+there are much fewer bets.
 
 **The totals market is different.** The same ratings were backtested
 against Pinnacle's corner over/under lines, and every metric/window
@@ -791,6 +789,5 @@ line; supremacy (Sup) is home corners minus away corners, and Diff is
 the model minus Pinnacle. For a flagged bet, EV is the expected return
 per unit staked on that side (H or A) at Pinnacle's handicap odds, with
 each side's corners treated as an independent Poisson count around its
-prediction. Where the model and the market agree, as in
-Hajduk Split v Slaven Belupo or FCSB v Petrolul Ploiesti, there's no
-bet.
+prediction. Where the model and the market agree, as in Hajduk Split v
+Slaven Belupo or FCSB v Petrolul Ploiesti, there's no bet.
