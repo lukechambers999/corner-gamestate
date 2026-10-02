@@ -1,38 +1,66 @@
 [
   {
-    "objectID": "methodology.html",
-    "href": "methodology.html",
-    "title": "Methodology",
+    "objectID": "long-term-model.html",
+    "href": "long-term-model.html",
+    "title": "A Long-Term Season Model",
     "section": "",
-    "text": "Game state. The scoreline from a team’s point of view at the moment of an event: winning, drawing or losing. Minutes in each state are measured from the minutes goals were scored. Match length is taken as the later of 97 minutes and the last recorded event.\nSupremacy. The expected goal difference (home minus away) implied by Pinnacle’s pre-match Asian handicap and goal lines. Expected goals and supremacy are solved together from the two lines with a root-finder. Team supremacy is that value from the team’s own side (flipped for away teams).\nRepeater. A corner by the same team, in the same half, within one minute of that team’s previous corner. Repeaters are given a value of 0.\nAdjusted corner value. For a corner won by side s (home/away) in state g at team supremacy x:\n\n\\text{value} = \\frac{\\bar r_s}{\\alpha_{s,g} + \\beta_{s,g}\\,x}\n\nwhere \\bar r_s is the league’s average corner rate for side s, and (\\alpha, \\beta) come from a line fitted to corners-per-minute across 30 supremacy buckets for that league, side and state. In the full model the fit is weighted by minutes in each bucket, and closed-doors COVID matches are excluded from fitting."
+    "text": "Rating a team on goals alone is noisy, on xG alone ignores finishing and goalkeeping, and on betting lines alone simply copies the market. This model blends all three into attack and defence ratings, prices every remaining fixture from them, and simulates the rest of the season to put odds on the title, the top four, the top six and relegation. Every number below is recalculated in your browser as you move the sliders.\n\n\n\nSerie A league modelled\n\n\n3,172 matches since 2015\n\n\n80 fixtures left to price"
   },
   {
-    "objectID": "methodology.html#definitions",
-    "href": "methodology.html#definitions",
-    "title": "Methodology",
+    "objectID": "long-term-model.html#introduction",
+    "href": "long-term-model.html#introduction",
+    "title": "A Long-Term Season Model",
     "section": "",
-    "text": "Game state. The scoreline from a team’s point of view at the moment of an event: winning, drawing or losing. Minutes in each state are measured from the minutes goals were scored. Match length is taken as the later of 97 minutes and the last recorded event.\nSupremacy. The expected goal difference (home minus away) implied by Pinnacle’s pre-match Asian handicap and goal lines. Expected goals and supremacy are solved together from the two lines with a root-finder. Team supremacy is that value from the team’s own side (flipped for away teams).\nRepeater. A corner by the same team, in the same half, within one minute of that team’s previous corner. Repeaters are given a value of 0.\nAdjusted corner value. For a corner won by side s (home/away) in state g at team supremacy x:\n\n\\text{value} = \\frac{\\bar r_s}{\\alpha_{s,g} + \\beta_{s,g}\\,x}\n\nwhere \\bar r_s is the league’s average corner rate for side s, and (\\alpha, \\beta) come from a line fitted to corners-per-minute across 30 supremacy buckets for that league, side and state. In the full model the fit is weighted by minutes in each bucket, and closed-doors COVID matches are excluded from fitting."
+    "text": "Rating a team on goals alone is noisy, on xG alone ignores finishing and goalkeeping, and on betting lines alone simply copies the market. This model blends all three into attack and defence ratings, prices every remaining fixture from them, and simulates the rest of the season to put odds on the title, the top four, the top six and relegation. Every number below is recalculated in your browser as you move the sliders.\n\n\n\nSerie A league modelled\n\n\n3,172 matches since 2015\n\n\n80 fixtures left to price"
   },
   {
-    "objectID": "methodology.html#ratings-and-prediction",
-    "href": "methodology.html#ratings-and-prediction",
-    "title": "Methodology",
-    "section": "Ratings and prediction",
-    "text": "Ratings and prediction\n\nEach team has an attack rating (corners won) and a defence rating (corners conceded): rolling means over its last N matches (12, 15, 19, 25 or 30), using only matches played before the fixture being predicted.\nFour metrics are compared: raw counts, raw without repeaters (nr), adjusted values (adj), and adjusted without repeaters (adj_nr).\nHome corners are predicted with OLS on the home attack rating, the away defence rating and match supremacy. Away corners are predicted the same way, the other way round.\nPromoted and relegated teams keep their ratings across divisions. Supremacy in the new league’s fixtures accounts for the change in opposition."
+    "objectID": "long-term-model.html#the-model",
+    "href": "long-term-model.html#the-model",
+    "title": "A Long-Term Season Model",
+    "section": "2. The model",
+    "text": "2. The model\nUse the sliders to change how many recent matches feed each rating and how much weight goals, xG and the betting market get. The odds weight fills whatever is left so the three always add up to 1. Reset to optimised restores the combination that tracked the market most closely in past seasons (section 4). Your settings are saved in the page link, so you can share a particular set-up with someone.\nLoading the model…\n\nThe season is cut off at 2026-04-01 with 300 results played. This is a demonstration snapshot. The plan is for it to update daily from the scraped data."
   },
   {
-    "objectID": "methodology.html#betting-backtest",
-    "href": "methodology.html#betting-backtest",
-    "title": "Methodology",
-    "section": "Betting backtest",
-    "text": "Betting backtest\n\nTest period: 2024/25 and 2025/26. The OLS model is fitted only on earlier seasons, and predictions are rescaled to the test period’s league corner level.\nMarket: Pinnacle Asian corner handicap. Its implied corner supremacy is compared with the model’s predicted home-minus-away corners.\nSelection: a 1-unit bet on the side the model prefers when the two differ by 0.5 corners or more (a threshold sweep is shown in the analysis).\nSettlement: actual raw corners at Pinnacle’s quoted odds, including quarter-line half-win and half-loss handling and pushes on whole lines.\nTotals: corner over/under was backtested with the same set-up and lost money in every configuration. It’s no longer part of the live model."
+    "objectID": "long-term-model.html#data",
+    "href": "long-term-model.html#data",
+    "title": "A Long-Term Season Model",
+    "section": "3. Data",
+    "text": "3. Data\nTwo sources are joined match by match:\n\nUnderstat for each match’s goals and expected goals (xG).\ntotalcorner.com for the pre-match Asian handicap and goal line. The goal line is solved for the Poisson goals rate that prices it fairly, and the handicap for the goal difference that prices it fairly under a Skellam model. Together they give the market’s expected goals for each side, called Asian goals here. This is the same odds-to-goals step used in the corner model.\n\n\n\nOdds to expected goals for each side → code/lt/asian_lines.py\n\n\nMatches played behind closed doors (March 2020 to June 2022) are left out. Home advantage is close to zero in them, and they would distort both the ratings and the home advantage factor."
   },
   {
-    "objectID": "methodology.html#code",
-    "href": "methodology.html#code",
-    "title": "Methodology",
+    "objectID": "long-term-model.html#ratings",
+    "href": "long-term-model.html#ratings",
+    "title": "A Long-Term Season Model",
+    "section": "4. Ratings",
+    "text": "4. Ratings\nEach team gets an attack rating (goals it’s expected to score) and a defence rating (goals it’s expected to concede) against an average opponent. Each is a weighted average of three rolling means over the team’s last n league matches:\n\n\\text{Attack} = w_g\\,\\overline{\\text{goals}} + w_x\\,\\overline{\\text{xG}} + w_o\\,\\overline{\\text{Asian}}\n\nwhere w_g + w_x + w_o = 1, and the same for goals, xG and Asian goals conceded.\nThe window and weights were chosen by grid search. For every window from 5 to 29 matches and every weight combination, each past match was predicted using only ratings from before it. The predictions were then scored on mean absolute error (MAE) against the market’s own total and supremacy for that match. Supremacy counted for 75% of the score, since this model is mainly for finding supremacy differences. The search used seasons up to 2022/23. The winning combination was then scored on 2023/24 onwards, which the search never saw.\n\n\nGrid search: find_optimal_parameters() → code/lt/optimise.py\n\n\nThe best combination was a 16-match window with weights of 10% goals, 10% xG and 80% odds. Out of sample, its predictions were off the market’s by an average of 0.2056 goals on the total and 0.1797 on supremacy. The heavy weight on the odds is expected, because the market already contains most of what goals and xG say about a team. The small goals and xG weights pick up recent performance the lines may not have caught up with yet."
+  },
+  {
+    "objectID": "long-term-model.html#from-ratings-to-prices",
+    "href": "long-term-model.html#from-ratings-to-prices",
+    "title": "A Long-Term Season Model",
+    "section": "5. From ratings to prices",
+    "text": "5. From ratings to prices\nA fixture’s expected goals multiply one side’s attack by the other side’s defence, relative to the league’s average defence:\n\n\\lambda_{home} = \\frac{\\text{Att}_{home}\\times\\text{Def}_{away}}{\\overline{\\text{Def}}}\n\n\n\\lambda_{away} = \\frac{\\text{Att}_{away}\\times\\text{Def}_{home}}{\\overline{\\text{Def}}}\n\nHome advantage is then moved from the away side to the home side. The home team gains 9.4% of the match’s expected goals and the total stays the same. That share is the home-minus-away goal difference as a proportion of all goals in the league’s non-COVID history.\n\n\nExpected goals: predict_goals() → code/lt/ratings.py\n\n\nTwo independent Poisson distributions turn the expected goals into a probability for every scoreline up to 10-10. Independent Poissons slightly under-price low-scoring draws, so the Dixon-Coles correction reweights 0-0, 0-1, 1-0 and 1-1 using one parameter, ρ. ρ is fitted by maximum likelihood on past scorelines, with the market’s expected goals as the inputs (ρ = -0.034). Adding up the scorelines where the home side wins, where it’s level, and where the away side wins gives the home, draw and away probabilities. Their inverses are the fair (margin-free) 1X2 odds.\n\n\nDixon-Coles scorelines and 1X2 → code/lt/dixon_coles.py\n\n\nThe predicted table adds each fixture’s expected points (3 × win probability + draw probability) and expected goals to the current table."
+  },
+  {
+    "objectID": "long-term-model.html#simulating-the-season",
+    "href": "long-term-model.html#simulating-the-season",
+    "title": "A Long-Term Season Model",
+    "section": "6. Simulating the season",
+    "text": "6. Simulating the season\nExpected points give the most likely finishing order, but not how likely each outcome is. For that, the rest of the season is simulated thousands of times. Each fixture is drawn as a home win, draw or away win from its 1X2 probabilities, and the final positions are recorded. The share of simulations in which a team wins the league, finishes in the top 4 or top 6, or ends in the bottom 3 is its probability, and 1 / probability is its fair price.\n\n\nMonte Carlo: simulate_season() → code/lt/simulate.py"
+  },
+  {
+    "objectID": "long-term-model.html#limitations",
+    "href": "long-term-model.html#limitations",
+    "title": "A Long-Term Season Model",
+    "section": "7. Limitations",
+    "text": "7. Limitations\n\nSnapshot data. This version runs on a fixed Serie A snapshot. Promoted teams are rated only on their top-flight matches. Their lower-division form isn’t carried over with a promotion adjustment yet.\nSquad changes. The ratings don’t react to transfers, injuries, suspensions or manager changes until those show up in results and prices.\nCorrelated inputs. Betting lines are partly built from past goals and xG, so the three metrics overlap. The weights describe what predicts the market best, not three independent signals.\nEqual weighting inside the window. Every match in the window counts the same. Weighting recent matches more would react faster but could over-read a tough run of fixtures, unless the opposition’s strength is accounted for.\nSimplified simulation. Simulated matches give points only, with no goals, so teams level on points are ordered at random instead of by goal difference. Ratings are also fixed for the rest of the season and don’t update after each simulated result.\nMarket fit is one yardstick. Matching the market on MAE doesn’t show the model can beat it. The corner model goes a step further and backtests against Pinnacle prices, which is the natural next step here."
+  },
+  {
+    "objectID": "long-term-model.html#code",
+    "href": "long-term-model.html#code",
+    "title": "A Long-Term Season Model",
     "section": "Code",
-    "text": "Code\nThe processing code for the original study is in the code/ folder of this site’s repository. The small data snapshots behind every chart and table are in snapshots/."
+    "text": "Code\nThe model’s Python code is in code/lt/, adapted from the original notebook. The browser version that runs this page is in lt_app/, and its outputs are checked against the Python version at the default settings. The data snapshot is in snapshots/lt/."
   },
   {
     "objectID": "index.html",
@@ -82,5 +110,40 @@
     "title": "A Game State Adjusted Corner Model",
     "section": "6. Running the model in real time",
     "text": "6. Running the model in real time\nEach day the pipeline rebuilds the ratings, predicts corners for upcoming fixtures and joins the predictions to Pinnacle’s live corner handicap prices. A bet is flagged when the model’s corner supremacy differs from Pinnacle’s by at least 0.5 corners, the threshold tested in section 5. A sample from one weekend in September 2026 (kick-off times are UK time):\n\n\n\n\n\n\nDate\nTime\nLeague\nHome\nAway\nPred Tot\nPred Sup\nPin Tot\nPin Sup\nDiff Tot\nDiff Sup\nEV\nValue\n\n\n\n\n13 Sep\n12:00\nEngland Championship\nSheff Utd\nWolverhampton\n10.49\n-0.71\n9.77\n-0.08\n+0.72\n-0.63\nA +0.09\nAWAY\n\n\n13 Sep\n12:30\nBelgium First Division A\nClub Brugge\nAntwerp\n10.81\n4.48\n10.92\n4.00\n-0.11\n+0.48\n–\n\n\n\n13 Sep\n14:00\nItaly Serie A\nLecce\nMonza\n8.99\n-0.04\n8.73\n0.87\n+0.26\n-0.91\nA +0.18\nAWAY\n\n\n13 Sep\n14:30\nGermany Bundesliga I\nRB Leipzig\nHamburg\n10.33\n4.07\n10.32\n3.60\n+0.01\n+0.47\n–\n\n\n\n13 Sep\n15:15\nSpain La Liga\nLevante\nBarcelona\n9.29\n-4.55\n10.16\n-2.95\n-0.87\n-1.60\nA +0.34\nAWAY\n\n\n13 Sep\n15:30\nSwitzerland Super League\nLucerne\nBasel\n10.92\n1.50\n10.94\n1.34\n-0.02\n+0.16\n–\n\n\n\n13 Sep\n16:00\nAustria Bundesliga\nSK Sturm Graz\nLASK Linz\n9.89\n-0.70\n10.73\n0.36\n-0.84\n-1.06\nA +0.16\nAWAY\n\n\n13 Sep\n16:30\nPoland Ekstraklasa\nLegia Warsaw\nWidzew Lodz\n9.43\n1.90\n9.79\n1.65\n-0.36\n+0.25\n–\n\n\n\n13 Sep\n17:00\nDenmark Superligaen\nFC Nordsjaelland\nAGF Aarhus\n9.81\n2.22\n10.32\n0.49\n-0.51\n+1.73\nH +0.32\nHOME\n\n\n13 Sep\n19:00\nCroatia HNL\nHajduk Split\nSlaven Belupo\n9.38\n3.66\n9.68\n3.27\n-0.30\n+0.39\n–\n\n\n\n14 Sep\n18:00\nSweden Allsvenskan\nDjurgarden\nGAIS\n10.43\n3.03\n9.82\n2.15\n+0.61\n+0.88\nH +0.14\nHOME\n\n\n14 Sep\n19:00\nRomania Liga I\nFCSB\nPetrolul Ploiesti\n9.89\n3.10\n10.11\n3.25\n-0.22\n-0.15\n–\n\n\n\n15 Sep\n19:45\nScotland Premiership\nMotherwell\nAberdeen\n9.50\n1.57\n9.82\n2.15\n-0.32\n-0.58\nA +0.07\nAWAY\n\n\n\n\n\n\nPred is the model’s predicted corners and Pin is Pinnacle’s implied line; supremacy (Sup) is home corners minus away corners, and Diff is the model minus Pinnacle. For a flagged bet, EV is the expected return per unit staked on that side (H or A) at Pinnacle’s handicap odds, with each side’s corners treated as an independent Poisson count around its prediction. Where the model and the market agree, as in Hajduk Split v Slaven Belupo or FCSB v Petrolul Ploiesti, there’s no bet."
+  },
+  {
+    "objectID": "methodology.html",
+    "href": "methodology.html",
+    "title": "Methodology",
+    "section": "",
+    "text": "Game state. The scoreline from a team’s point of view at the moment of an event: winning, drawing or losing. Minutes in each state are measured from the minutes goals were scored. Match length is taken as the later of 97 minutes and the last recorded event.\nSupremacy. The expected goal difference (home minus away) implied by Pinnacle’s pre-match Asian handicap and goal lines. Expected goals and supremacy are solved together from the two lines with a root-finder. Team supremacy is that value from the team’s own side (flipped for away teams).\nRepeater. A corner by the same team, in the same half, within one minute of that team’s previous corner. Repeaters are given a value of 0.\nAdjusted corner value. For a corner won by side s (home/away) in state g at team supremacy x:\n\n\\text{value} = \\frac{\\bar r_s}{\\alpha_{s,g} + \\beta_{s,g}\\,x}\n\nwhere \\bar r_s is the league’s average corner rate for side s, and (\\alpha, \\beta) come from a line fitted to corners-per-minute across 30 supremacy buckets for that league, side and state. In the full model the fit is weighted by minutes in each bucket, and closed-doors COVID matches are excluded from fitting."
+  },
+  {
+    "objectID": "methodology.html#definitions",
+    "href": "methodology.html#definitions",
+    "title": "Methodology",
+    "section": "",
+    "text": "Game state. The scoreline from a team’s point of view at the moment of an event: winning, drawing or losing. Minutes in each state are measured from the minutes goals were scored. Match length is taken as the later of 97 minutes and the last recorded event.\nSupremacy. The expected goal difference (home minus away) implied by Pinnacle’s pre-match Asian handicap and goal lines. Expected goals and supremacy are solved together from the two lines with a root-finder. Team supremacy is that value from the team’s own side (flipped for away teams).\nRepeater. A corner by the same team, in the same half, within one minute of that team’s previous corner. Repeaters are given a value of 0.\nAdjusted corner value. For a corner won by side s (home/away) in state g at team supremacy x:\n\n\\text{value} = \\frac{\\bar r_s}{\\alpha_{s,g} + \\beta_{s,g}\\,x}\n\nwhere \\bar r_s is the league’s average corner rate for side s, and (\\alpha, \\beta) come from a line fitted to corners-per-minute across 30 supremacy buckets for that league, side and state. In the full model the fit is weighted by minutes in each bucket, and closed-doors COVID matches are excluded from fitting."
+  },
+  {
+    "objectID": "methodology.html#ratings-and-prediction",
+    "href": "methodology.html#ratings-and-prediction",
+    "title": "Methodology",
+    "section": "Ratings and prediction",
+    "text": "Ratings and prediction\n\nEach team has an attack rating (corners won) and a defence rating (corners conceded): rolling means over its last N matches (12, 15, 19, 25 or 30), using only matches played before the fixture being predicted.\nFour metrics are compared: raw counts, raw without repeaters (nr), adjusted values (adj), and adjusted without repeaters (adj_nr).\nHome corners are predicted with OLS on the home attack rating, the away defence rating and match supremacy. Away corners are predicted the same way, the other way round.\nPromoted and relegated teams keep their ratings across divisions. Supremacy in the new league’s fixtures accounts for the change in opposition."
+  },
+  {
+    "objectID": "methodology.html#betting-backtest",
+    "href": "methodology.html#betting-backtest",
+    "title": "Methodology",
+    "section": "Betting backtest",
+    "text": "Betting backtest\n\nTest period: 2024/25 and 2025/26. The OLS model is fitted only on earlier seasons, and predictions are rescaled to the test period’s league corner level.\nMarket: Pinnacle Asian corner handicap. Its implied corner supremacy is compared with the model’s predicted home-minus-away corners.\nSelection: a 1-unit bet on the side the model prefers when the two differ by 0.5 corners or more (a threshold sweep is shown in the analysis).\nSettlement: actual raw corners at Pinnacle’s quoted odds, including quarter-line half-win and half-loss handling and pushes on whole lines.\nTotals: corner over/under was backtested with the same set-up and lost money in every configuration. It’s no longer part of the live model."
+  },
+  {
+    "objectID": "methodology.html#code",
+    "href": "methodology.html#code",
+    "title": "Methodology",
+    "section": "Code",
+    "text": "Code\nThe processing code for the original study is in the code/ folder of this site’s repository. The small data snapshots behind every chart and table are in snapshots/.\nA second, interactive project on this site, the Long-term model, rates teams on goals, xG and betting lines and simulates the rest of the season."
   }
 ]
