@@ -26,6 +26,9 @@ ha_pct = f"{meta['HA'] * 100:.1f}"
 rho = f"{meta['rho']:.3f}"
 mae_total, mae_sup = meta["test_mae"]["total"], meta["test_mae"]["sup"]
 w_g, w_x, w_o = (f"{d[k]:.0%}" for k in ("goals_wgt", "xG_wgt", "asian_wgt"))
+promo = meta["promotion"]
+promo_for_pct = f"{(1 - promo['for']) * 100:.0f}"
+promo_conc_pct = f"{(promo['conc'] - 1) * 100:.0f}"
 ```
 
 ## 1. Introduction
@@ -56,7 +59,7 @@ sliders.
 
 ## 2. The model
 
-Use the sliders to change how many recent matches feed each rating and
+Use the sliders to change how many recent matches (up to one season) feed each rating and
 how much weight goals, xG and the betting market get. The odds weight
 fills whatever is left so the three always add up to 1. **Reset to
 optimised** restores the combination that tracked the market most
@@ -77,7 +80,8 @@ The plan is for it to update daily from the scraped data.
 Two sources are joined match by match:
 
 - **Understat** for each match's goals and expected goals (xG).
-- **totalcorner.com** for the pre-match Asian handicap and goal line.
+- **totalcorner.com** for the pre-match Asian handicap and goal line,
+  for both the top flight and the division below.
   The goal line is solved for the Poisson goals rate that prices it
   fairly, and the handicap for the goal difference that prices it
   fairly under a Skellam model. Together they give the market's expected
@@ -128,6 +132,29 @@ expected, because the market already contains most of what goals and
 xG say about a team. The small goals and xG weights pick up
 recent performance the lines may not have caught up with yet.
 
+### Promoted teams
+
+A newly promoted team has few top-flight matches to rate it on, and
+none at all at the start of the season. Its matches from the season it
+won promotion are used instead, with the market's expected goals
+scaled to top-flight level. The scaling comes from the
+`{python} promo["n"]` past promotions in the data. For each one, the
+team's average Asian goals in its first top-flight season are compared
+with its promotion season. On average, promoted teams' expected goals
+scored fell by `{python} promo_for_pct`% and their expected goals
+conceded rose by `{python} promo_conc_pct`%.
+
+Only the odds-based metric can be carried over this way, because
+Understat has no second-division goals or xG. Within the window, goals
+and xG are averaged over the team's top-flight matches. A team with no
+top-flight matches yet is rated on its scaled Asian goals alone. In the
+app, these teams are tagged **P** with the number of second-division
+matches in their window.
+
+```{python}
+code_link("code/lt/promotion.py", "Promotion factors and adjustment")
+```
+
 ## 5. From ratings to prices
 
 A fixture's expected goals multiply one side's attack by the other
@@ -148,7 +175,7 @@ difference as a proportion of all goals in the league's non-COVID
 history.
 
 ```{python}
-code_link("code/lt/ratings.py#L63-L73", "Expected goals: predict_goals()")
+code_link("code/lt/ratings.py#L70-L80", "Expected goals: predict_goals()")
 ```
 
 Two independent Poisson distributions turn the expected goals into a
@@ -186,9 +213,12 @@ code_link("code/lt/simulate.py", "Monte Carlo: simulate_season()")
 ## 7. Limitations
 
 - **Snapshot data.** This version runs on a fixed Serie A snapshot.
-  Promoted teams are rated only on their top-flight matches. Their
-  lower-division form isn't carried over with a promotion adjustment
-  yet.
+  By the cut-off, every promoted team has played at least 30 Serie A
+  matches, so on this page the promotion adjustment only shows up with
+  windows of more than 30. It matters most early in a season.
+- **One promotion factor for everyone.** Every promoted team is scaled
+  by the same average factor, whatever its budget or squad changes.
+  After a few top-flight matches the market's own lines take over.
 - **Squad changes.** The ratings don't react to transfers, injuries,
   suspensions or manager changes until those show up in results and
   prices.

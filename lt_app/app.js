@@ -8,12 +8,13 @@ const SEED = 1;
 // Code links shown under each tab: [label, path with line range]
 const CODE = {
   ratings: [
-    ["Team performance frame and rolling ratings", "code/lt/ratings.py#L19-L60"],
+    ["Team performance frame and rolling ratings", "code/lt/ratings.py#L19-L67"],
+    ["Promoted teams: promotion factors", "code/lt/promotion.py"],
     ["Window and weight grid search", "code/lt/optimise.py#L73-L98"],
-    ["Browser version", "lt_app/model.js#L6-L24"],
+    ["Browser version", "lt_app/model.js#L6-L31"],
   ],
   fixtures: [
-    ["Expected goals with home advantage", "code/lt/ratings.py#L63-L73"],
+    ["Expected goals with home advantage", "code/lt/ratings.py#L70-L80"],
     ["Dixon-Coles scorelines and 1X2", "code/lt/dixon_coles.py#L20-L62"],
     ["Odds-implied (Asian) goals", "code/lt/asian_lines.py"],
   ],
@@ -22,7 +23,7 @@ const CODE = {
   ],
   season: [
     ["Monte Carlo simulation", "code/lt/simulate.py"],
-    ["Browser version", "lt_app/model.js#L133-L175"],
+    ["Browser version", "lt_app/model.js#L140-L182"],
   ],
 };
 
@@ -107,12 +108,16 @@ function ratingsTab(c) {
   };
   return el("div", {},
     el("p", { class: "lt-note" },
-      `Attack = expected goals scored per match, defence = expected goals conceded (lower is better), each a weighted average over the team's last ${state.params.n} league matches. League average defence: ${fmt.n(c.ratings.dsAvg, 3)}.`),
+      `Attack = expected goals scored per match, defence = expected goals conceded (lower is better), each a weighted average over the team's last ${state.params.n} league matches. League average defence: ${fmt.n(c.ratings.dsAvg, 3)}.` +
+      (c.ratings.rows.some((r) => r.below)
+        ? ` Teams tagged P are recently promoted: that many matches in their window come from the division below, with Asian goals scaled to top-flight level (for × ${state.data.meta.promotion.for}, against × ${state.data.meta.promotion.conc}).`
+        : "")),
     table(
       [{ label: "#" }, { label: "Team" }, { label: "Attack", key: "AS", cls: "num" }, { label: "", cls: "barcol" },
        { label: "Defence", key: "DS", cls: "num" }, { label: "", cls: "barcol" }, { label: "Net", key: "net", cls: "num" }],
       rows.map((r, i) => el("tr", {},
-        el("td", { class: "muted" }, i + 1), el("td", { class: "team" }, r.team),
+        el("td", { class: "muted" }, i + 1), el("td", { class: "team" }, r.team,
+          r.below ? el("span", { class: "lt-tag", title: `${r.below} of the last ${state.params.n} matches are from the division below, scaled by the promotion factors` }, `P ${r.below}`) : null),
         el("td", { class: "num" }, fmt.n(r.AS)), el("td", { class: "barcol" }, bar(r.AS, maxAS, "att")),
         el("td", { class: "num" }, fmt.n(r.DS)), el("td", { class: "barcol" }, bar(r.DS, maxDS, "def")),
         el("td", { class: "num" }, fmt.signed(r.net)))),

@@ -19,7 +19,7 @@ repeater corners, and backtesting them against Pinnacle's corner markets.
 | `code/lt/` | Long-term model code (adapted from `portfolio/LT_model.ipynb`), linked from that page |
 | `lt_app/` | The in-browser app: `model.js` mirrors `code/lt/`, `app.js` is the UI |
 | `snapshots/lt/` | Per-league JSON the app runs on (`index.json` lists the leagues) |
-| `_build/make_lt_snapshots.py` | Regenerates `snapshots/lt/` from `../LT_Model_App/` CSVs, fitting HA, rho and the default window/weights |
+| `_build/make_lt_snapshots.py` | Regenerates `snapshots/lt/` from `../LT_Model_App/` CSVs, fitting HA, rho, the default window/weights and the promotion factors (needs the second-division totalcorner CSV + lookup tables) |
 
 ## Editing
 

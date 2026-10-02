@@ -4,17 +4,24 @@
 const MAX_GOALS = 11;
 
 // Team ratings: mean of each metric over the team's most recent n matches, then weighted
-// (code/lt/ratings.py: current_ratings, weighted_ratings)
+// (code/lt/ratings.py: current_ratings, weighted_ratings). Promoted teams' second-division
+// matches have Asian goals only, so goals and xG average over the matches that have them,
+// and fall back on the Asian average if none do.
 export function teamRatings(teams, n, goalsWgt, xgWgt, asianWgt) {
-  const mean = (arr) => arr.slice(0, n).reduce((a, b) => a + b, 0) / n;
+  const mean = (arr) => {
+    const v = arr.slice(0, n).filter((x) => x != null);
+    return v.length ? v.reduce((a, b) => a + b, 0) / v.length : null;
+  };
   const rows = teams.map((t) => {
+    const af = mean(t.Asian_for), aa = mean(t.Asian_conc);
     const m = {
-      gf: mean(t.GoalsScored), ga: mean(t.GoalsConceded),
-      xgf: mean(t.xG_for), xga: mean(t.xG_conc),
-      af: mean(t.Asian_for), aa: mean(t.Asian_conc),
+      gf: mean(t.GoalsScored) ?? af, ga: mean(t.GoalsConceded) ?? aa,
+      xgf: mean(t.xG_for) ?? af, xga: mean(t.xG_conc) ?? aa,
+      af, aa,
     };
     return {
       team: t.team, ...m,
+      below: (t.below || []).slice(0, n).reduce((a, b) => a + b, 0),
       AS: m.gf * goalsWgt + m.xgf * xgWgt + m.af * asianWgt,
       DS: m.ga * goalsWgt + m.xga * xgWgt + m.aa * asianWgt,
     };
@@ -190,5 +197,11 @@ export function checkAgainstPython(data) {
     [f.home, f.away, f.p.home, f.p.draw, f.p.away].forEach((v, j) => (maxFixture = Math.max(maxFixture, Math.abs(v - c[j]))));
   });
   for (const r of exp) maxPts = Math.max(maxPts, Math.abs(r.Pts - data.check.expected_pts[r.team]));
-  return { maxRating, maxFixture, maxPts };
+  const longest = teamRatings(data.teams, data.meta.window_max, d.goals_wgt, d.xG_wgt, d.asian_wgt);
+  let maxRatingWindowMax = 0;
+  for (const [team, [as, ds]] of Object.entries(data.check.ratings_window_max || {})) {
+    const r = longest.byTeam[team];
+    maxRatingWindowMax = Math.max(maxRatingWindowMax, Math.abs(r.AS - as), Math.abs(r.DS - ds));
+  }
+  return { maxRating, maxFixture, maxPts, maxRatingWindowMax };
 }

@@ -126,3 +126,19 @@ def add_asian_goals(fixtures_tc):
     df['AsianHomeGoals'] = (df['asian_sup'] + df['asian_total_goals']) / 2
     df['AsianAwayGoals'] = df['asian_total_goals'] - df['AsianHomeGoals']
     return df
+
+
+# Earlier (v2) method used for the demo snapshot: looks the demargined lines up in precomputed
+# tables (sup_conversion.csv, goallines.csv) instead of solving for them
+def add_asian_goals_lookup(fixtures_tc, sup_conv_table, goals_conv_table):
+    df = fixtures_tc.copy()
+    df['hcaplevel'] = df['AH.Line'].apply(parse_line)
+    df['price_home'] = ((df['AH.Home.Odds'] + df['AH.Away.Odds']) / df['AH.Away.Odds']).round(2)
+    df['Goal.O.Odds'] = df['Goal.O.Odds'].round(2)
+
+    df = df.merge(sup_conv_table, on=['hcaplevel', 'price_home'], how='left')
+    df = df.merge(goals_conv_table, on=['Goal.Line', 'Goal.O.Odds'], how='left')
+
+    df['AsianHomeGoals'] = (df['adjsup'] + df['Gls']) / 2
+    df['AsianAwayGoals'] = df['Gls'] - df['AsianHomeGoals']
+    return df

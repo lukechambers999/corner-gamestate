@@ -24,6 +24,7 @@ def team_strength_frame(fixtures_past):
     df['asian_total_goals'] = df['AsianHomeGoals'] + df['AsianAwayGoals']
 
     shared = ['matchid', 'Date', 'total_goals', 'total_xG', 'asian_total_goals']
+    shared += ['League'] if 'League' in df else []
 
     home = df[shared + ['Home', 'goals_h', 'goals_a', 'xG_h', 'xG_a', 'AsianHomeGoals', 'AsianAwayGoals']].rename(columns={
         'Home': 'Team', 'goals_h': 'GoalsScored', 'goals_a': 'GoalsConceded',
@@ -54,7 +55,13 @@ def current_ratings(team_strength, current_teams, n_matches, goals_wgt, xG_wgt, 
     counts = recent.groupby('Team').size()
     recent = recent[recent['Team'].isin(counts[counts == n_matches].index)]
 
+    # Means skip missing values: promoted teams' second-division rows have Asian goals only
     ratings = recent.groupby('Team')[COLS_TO_AVG_TEAM].mean().add_suffix('_roll').reset_index()
+
+    # A team with no goals or xG in its window falls back on its Asian goals average
+    for col, asian in [('GoalsScored', 'Asian_for'), ('xG_for', 'Asian_for'),
+                       ('GoalsConceded', 'Asian_conc'), ('xG_conc', 'Asian_conc')]:
+        ratings[f'{col}_roll'] = ratings[f'{col}_roll'].fillna(ratings[f'{asian}_roll'])
     ratings['weight_AS'], ratings['weight_DS'] = weighted_ratings(ratings, goals_wgt, xG_wgt, asian_wgt)
     ratings['DS_avg'] = ratings['weight_DS'].mean()
     return ratings
