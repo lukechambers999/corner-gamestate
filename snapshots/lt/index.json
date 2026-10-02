@@ -1,0 +1,9 @@
+{
+ "leagues": [
+  {
+   "key": "serie_a",
+   "league": "Serie A",
+   "file": "serie_a.json"
+  }
+ ]
+}
