@@ -223,6 +223,18 @@ table.lt-table td.barcol, table.lt-table th.barcol { width: 22%; min-width: 60px
 .lt-bar.att { background: var(--lt-accent); }
 .lt-bar.def { background: #b9b8b2; }
 
+.lt-tag {
+  display: inline-block;
+  margin-left: 0.4rem;
+  font-size: 10px;
+  font-weight: 650;
+  color: #b2560f;
+  border: 1px solid #eb6834;
+  border-radius: 3px;
+  padding: 0 4px;
+  vertical-align: 1px;
+}
+
 .lt-up { color: #1baf7a; font-size: 0.8em; }
 .lt-down { color: #e34948; font-size: 0.8em; }
 
