@@ -1,4 +1,4 @@
-// Browser implementation of the Long-term model. Mirrors code/lt/*.py so the page can
+// Browser implementation of the Season Outrights Model. Mirrors code/lt/*.py so the page can
 // recompute everything live as the parameters change. No DOM code in this file.
 
 const MAX_GOALS = 11;

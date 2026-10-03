@@ -8,7 +8,7 @@
 
 <meta name="author" content="Luke Chambers">
 
-<title>A Long-Term Season Model – Corners &amp; Game State</title>
+<title>Season Outrights Model – Luke Chambers - Data, Modelling and Analytics Portfolio</title>
 <style>
 /* Default styles provided by pandoc.
 ** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
@@ -132,7 +132,7 @@ window.Quarto = {
       <div class="navbar-container container-fluid">
       <div class="navbar-brand-container mx-auto">
     <a class="navbar-brand" href="./index.html">
-    <span class="navbar-title">Corners &amp; Game State</span>
+    <span class="navbar-title">Luke Chambers - Data, Modelling and Analytics Portfolio</span>
     </a>
   </div>
             <div id="quarto-search" class="" title="Search"></div>
@@ -143,20 +143,20 @@ window.Quarto = {
             <ul class="navbar-nav navbar-nav-scroll me-auto">
   <li class="nav-item">
     <a class="nav-link" href="./index.html"> 
-<span class="menu-text">Analysis</span></a>
+<span class="menu-text">Game State Corner Model</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link active" href="./long-term-model.html" aria-current="page"> 
+<span class="menu-text">Season Outrights Model</span></a>
   </li>  
   <li class="nav-item">
     <a class="nav-link" href="./methodology.html"> 
 <span class="menu-text">Methodology</span></a>
   </li>  
-  <li class="nav-item">
-    <a class="nav-link active" href="./long-term-model.html" aria-current="page"> 
-<span class="menu-text">Long-term model</span></a>
-  </li>  
 </ul>
             <ul class="navbar-nav navbar-nav-scroll ms-auto">
   <li class="nav-item compact">
-    <a class="nav-link" href="https://github.com/lukechambers999/corner-gamestate"> <i class="bi bi-github" role="img" aria-label="Code on GitHub">
+    <a class="nav-link" href="https://github.com/lukechambers999/portfolio_2026"> <i class="bi bi-github" role="img" aria-label="Code on GitHub">
 </i> 
 <span class="menu-text"></span></a>
   </li>  
@@ -195,7 +195,7 @@ window.Quarto = {
 
 <header id="title-block-header" class="quarto-title-block default">
 <div class="quarto-title">
-<h1 class="title">A Long-Term Season Model</h1>
+<h1 class="title">Season Outrights Model</h1>
 <p class="subtitle lead">Team ratings from goals, xG and betting lines, turned into match prices and season outcome odds</p>
 </div>
 
@@ -250,14 +250,14 @@ window.Quarto = {
 <li><strong>Understat</strong> for each match’s goals and expected goals (xG), and this season’s remaining fixtures. It is scraped fresh for every update, back to the 2015/16 season.</li>
 <li><strong>totalcorner.com</strong> for the pre-match Asian handicap and goal line, for both the top flight and the division below. These come from the daily scrape that also feeds the <a href="./index.html">corner model</a>. The goal line is solved for the Poisson goals rate that prices it fairly, and the handicap for the goal difference that prices it fairly under a Skellam model. Together they give the market’s expected goals for each side, called <em>Asian goals</em> here. This is the same odds-to-goals step used in the corner model.</li>
 </ul>
-<div id="ee575c5e" class="cell" data-execution_count="2">
+<div id="25ddf931" class="cell" data-execution_count="2">
 <div class="cell-output cell-output-display cell-output-markdown" data-execution_count="2">
-<p><a href="https://github.com/lukechambers999/corner-gamestate/blob/main/code/lt/understat.py" class="code-link">Understat scrape and team-name matching → <code>code/lt/understat.py</code></a></p>
+<p><a href="https://github.com/lukechambers999/portfolio_2026/blob/main/code/lt/understat.py" class="code-link">Understat scrape and team-name matching → <code>code/lt/understat.py</code></a></p>
 </div>
 </div>
-<div id="8e1398e0" class="cell" data-execution_count="3">
+<div id="6d591213" class="cell" data-execution_count="3">
 <div class="cell-output cell-output-display cell-output-markdown" data-execution_count="3">
-<p><a href="https://github.com/lukechambers999/corner-gamestate/blob/main/code/lt/asian_lines.py" class="code-link">Odds to expected goals for each side → <code>code/lt/asian_lines.py</code></a></p>
+<p><a href="https://github.com/lukechambers999/portfolio_2026/blob/main/code/lt/asian_lines.py" class="code-link">Odds to expected goals for each side → <code>code/lt/asian_lines.py</code></a></p>
 </div>
 </div>
 <p>The two sites spell some teams differently (<em>Manchester City</em> and <em>Man City</em>), so Understat names are converted to totalcorner’s. A match is then joined to its lines by the two teams and a kick-off date within two days, since the sites can put a late kick-off either side of midnight. 99.7% of matches find their lines. A match without lines (usually one played in the last day or so, before the next scrape) still counts towards its teams’ goals and xG averages. The odds average skips it.</p>
@@ -271,13 +271,13 @@ window.Quarto = {
 </span></p>
 <p>where <span class="math inline">w_g + w_x + w_o = 1</span>, and the same for goals, xG and Asian goals conceded.</p>
 <p>The window and weights were chosen by grid search, separately for each league. For every window from 5 to 29 matches and every weight combination, each past match was predicted using only ratings from before it. The predictions were then scored on mean absolute error (MAE) against the market’s own total and supremacy for that match. Supremacy counted for 75% of the score, since this model is mainly for finding supremacy differences. The search used seasons up to 2022/23. The winning combination was then scored on 2023/24 onwards, which the search never saw.</p>
-<div id="06870680" class="cell" data-execution_count="4">
+<div id="372a7546" class="cell" data-execution_count="4">
 <div class="cell-output cell-output-display cell-output-markdown" data-execution_count="4">
-<p><a href="https://github.com/lukechambers999/corner-gamestate/blob/main/code/lt/optimise.py#L73-L98" class="code-link">Grid search: find_optimal_parameters() → <code>code/lt/optimise.py</code></a></p>
+<p><a href="https://github.com/lukechambers999/portfolio_2026/blob/main/code/lt/optimise.py#L73-L98" class="code-link">Grid search: find_optimal_parameters() → <code>code/lt/optimise.py</code></a></p>
 </div>
 </div>
 <p>The leagues agree closely. Every one picked a window of 16 to 18 matches with 70% to 80% of the weight on the odds. The heavy odds weight is expected, because the market already contains most of what goals and xG say about a team. The small goals and xG weights pick up recent performance the lines may not have caught up with yet. The table below gives each league’s fitted values. The MAE columns are the out-of-sample error against the market, in goals.</p>
-<div id="19113f0b" class="cell" data-execution_count="5">
+<div id="740afdbf" class="cell" data-execution_count="5">
 <div class="cell-output cell-output-display cell-output-markdown" data-execution_count="5">
 <div class="table-wrap">
 <table class="caption-top table table-sm table-striped small">
@@ -391,9 +391,9 @@ window.Quarto = {
 <h3 class="anchored" data-anchor-id="promoted-teams">Promoted teams</h3>
 <p>A newly promoted team has few top-flight matches to rate it on, and none at all at the start of the season. Its matches from the season it won promotion are used instead, with the market’s expected goals scaled to top-flight level. Each league’s scaling comes from its own past promotions (165 across the five leagues). For each one, the team’s average Asian goals in its first top-flight season are compared with its promotion season. Depending on the league, promoted teams’ expected goals scored fell by 21% to 33% and their expected goals conceded rose by 49% to 67%.</p>
 <p>Only the odds-based metric can be carried over this way, because Understat has no second-division goals or xG. Within the window, goals and xG are averaged over the team’s top-flight matches. A team with no top-flight matches yet is rated on its scaled Asian goals alone. In the app, these teams are tagged <strong>P</strong> with the number of second-division matches in their window.</p>
-<div id="80dbaded" class="cell" data-execution_count="6">
+<div id="aeb6f46c" class="cell" data-execution_count="6">
 <div class="cell-output cell-output-display cell-output-markdown" data-execution_count="6">
-<p><a href="https://github.com/lukechambers999/corner-gamestate/blob/main/code/lt/promotion.py" class="code-link">Promotion factors and adjustment → <code>code/lt/promotion.py</code></a></p>
+<p><a href="https://github.com/lukechambers999/portfolio_2026/blob/main/code/lt/promotion.py" class="code-link">Promotion factors and adjustment → <code>code/lt/promotion.py</code></a></p>
 </div>
 </div>
 </section>
@@ -408,15 +408,15 @@ window.Quarto = {
 \lambda_{away} = \frac{\text{Att}_{away}\times\text{Def}_{home}}{\overline{\text{Def}}}
 </span></p>
 <p>Home advantage is then moved from the away side to the home side. The home team gains a fixed share of the match’s expected goals (9.2% to 14.6% depending on the league) and the total stays the same. That share is the home-minus-away goal difference as a proportion of all goals in the league’s non-COVID history.</p>
-<div id="087a6f8f" class="cell" data-execution_count="7">
+<div id="b89b94af" class="cell" data-execution_count="7">
 <div class="cell-output cell-output-display cell-output-markdown" data-execution_count="7">
-<p><a href="https://github.com/lukechambers999/corner-gamestate/blob/main/code/lt/ratings.py#L73-L83" class="code-link">Expected goals: predict_goals() → <code>code/lt/ratings.py</code></a></p>
+<p><a href="https://github.com/lukechambers999/portfolio_2026/blob/main/code/lt/ratings.py#L73-L83" class="code-link">Expected goals: predict_goals() → <code>code/lt/ratings.py</code></a></p>
 </div>
 </div>
 <p>Two independent Poisson distributions turn the expected goals into a probability for every scoreline up to 10-10. Independent Poissons slightly under-price low-scoring draws, so the Dixon-Coles correction reweights 0-0, 0-1, 1-0 and 1-1 using one parameter, ρ. ρ is fitted for each league by maximum likelihood on past scorelines, with the market’s expected goals as the inputs. Adding up the scorelines where the home side wins, where it’s level, and where the away side wins gives the home, draw and away probabilities. Their inverses are the fair (margin-free) 1X2 odds.</p>
-<div id="d4d06f78" class="cell" data-execution_count="8">
+<div id="dfce66ee" class="cell" data-execution_count="8">
 <div class="cell-output cell-output-display cell-output-markdown" data-execution_count="8">
-<p><a href="https://github.com/lukechambers999/corner-gamestate/blob/main/code/lt/dixon_coles.py#L20-L62" class="code-link">Dixon-Coles scorelines and 1X2 → <code>code/lt/dixon_coles.py</code></a></p>
+<p><a href="https://github.com/lukechambers999/portfolio_2026/blob/main/code/lt/dixon_coles.py#L20-L62" class="code-link">Dixon-Coles scorelines and 1X2 → <code>code/lt/dixon_coles.py</code></a></p>
 </div>
 </div>
 <p>The <strong>predicted table</strong> adds each fixture’s expected points (3 × win probability + draw probability) and expected goals to the current table.</p>
@@ -424,9 +424,9 @@ window.Quarto = {
 <section id="simulating-the-season" class="level2">
 <h2 class="anchored" data-anchor-id="simulating-the-season">6. Simulating the season</h2>
 <p>Expected points give the most likely finishing order, but not how likely each outcome is. For that, the rest of the season is simulated thousands of times. Each fixture is drawn as a home win, draw or away win from its 1X2 probabilities, and the final positions are recorded. The share of simulations in which a team wins the league, finishes in the top 4 or top 6, or ends in the bottom 3 is its probability, and 1 / probability is its fair price.</p>
-<div id="c99ffd5c" class="cell" data-execution_count="9">
+<div id="f596f0ef" class="cell" data-execution_count="9">
 <div class="cell-output cell-output-display cell-output-markdown" data-execution_count="9">
-<p><a href="https://github.com/lukechambers999/corner-gamestate/blob/main/code/lt/simulate.py" class="code-link">Monte Carlo: simulate_season() → <code>code/lt/simulate.py</code></a></p>
+<p><a href="https://github.com/lukechambers999/portfolio_2026/blob/main/code/lt/simulate.py" class="code-link">Monte Carlo: simulate_season() → <code>code/lt/simulate.py</code></a></p>
 </div>
 </div>
 </section>
@@ -443,7 +443,7 @@ window.Quarto = {
 </section>
 <section id="code" class="level2">
 <h2 class="anchored" data-anchor-id="code">Code</h2>
-<p>The model’s Python code is in <a href="https://github.com/lukechambers999/corner-gamestate/tree/main/code/lt"><code>code/lt/</code></a>, adapted from the original <a href="https://github.com/lukechambers999/portfolio/blob/main/LT_model.ipynb">notebook</a>. The browser version that runs this page is in <a href="https://github.com/lukechambers999/corner-gamestate/tree/main/lt_app"><code>lt_app/</code></a>, and its outputs are checked against the Python version at the default settings. The daily data snapshot is in <a href="https://github.com/lukechambers999/corner-gamestate/tree/main/snapshots/lt"><code>snapshots/lt/</code></a>, built by <a href="https://github.com/lukechambers999/corner-gamestate/blob/main/_build/make_lt_snapshots.py"><code>_build/make_lt_snapshots.py</code></a> from a scheduled <a href="https://github.com/lukechambers999/corner-gamestate/blob/main/.github/workflows/update_lt_data.yml">GitHub Action</a>.</p>
+<p>The model’s Python code is in <a href="https://github.com/lukechambers999/portfolio_2026/tree/main/code/lt"><code>code/lt/</code></a>, adapted from the original <a href="https://github.com/lukechambers999/portfolio/blob/main/LT_model.ipynb">notebook</a>. The browser version that runs this page is in <a href="https://github.com/lukechambers999/portfolio_2026/tree/main/lt_app"><code>lt_app/</code></a>, and its outputs are checked against the Python version at the default settings. The daily data snapshot is in <a href="https://github.com/lukechambers999/portfolio_2026/tree/main/snapshots/lt"><code>snapshots/lt/</code></a>, built by <a href="https://github.com/lukechambers999/portfolio_2026/blob/main/_build/make_lt_snapshots.py"><code>_build/make_lt_snapshots.py</code></a> from a scheduled <a href="https://github.com/lukechambers999/portfolio_2026/blob/main/.github/workflows/update_lt_data.yml">GitHub Action</a>.</p>
 
 
 </section>
@@ -522,7 +522,7 @@ window.Quarto = {
     }
       var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
       var mailtoRegex = new RegExp(/^mailto:/);
-        var filterRegex = new RegExp("https:\/\/lukechambers999\.github\.io\/corner-gamestate\/");
+        var filterRegex = new RegExp("https:\/\/lukechambers999\.github\.io\/portfolio_2026\/");
       var isInternal = (href) => {
           return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
       }

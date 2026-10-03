@@ -1,7 +1,7 @@
-// Interactive Long-term model: controls, tabs and tables. The model itself is in model.js.
+// Interactive Season Outrights Model: controls, tabs and tables. The model itself is in model.js.
 import { teamRatings, priceFixtures, currentTable, expectedTable, simulateSeason, checkAgainstPython } from "./model.js";
 
-const REPO = "https://github.com/lukechambers999/corner-gamestate/blob/main";
+const REPO = "https://github.com/lukechambers999/portfolio_2026/blob/main";
 const SNAP = "snapshots/lt/";
 const SEED = 1;
 
