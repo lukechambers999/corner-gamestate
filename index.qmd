@@ -60,8 +60,8 @@ won and builds team ratings from the adjusted values.
 :::
 
 ::: stat
-[`{python} f"{roi_hi:.1f}"`%]{.num}
-[ROI on corner handicap markets]{.lbl}
+[`{python} f"{roi_hi:.1f}"`%]{.num} [ROI on corner handicap
+markets]{.lbl}
 :::
 :::
 
@@ -624,6 +624,10 @@ comes from being favourites and the adjustment strips that out.
 Ratings use a 19-game window, the same as the live model, and are as of
 `{python} f"{cr_asof.day} {cr_asof:%B %Y}"`.
 
+```{python}
+code_link("code/ratings.py", "League baselines and rolling team ratings")
+```
+
 ### Adjusted ratings make better predictions
 
 Each set of ratings, together with match supremacy, feeds an OLS model
@@ -663,6 +667,10 @@ sensitive to game state. Removing repeaters from raw counts (nr) makes
 little difference on its own by this metric; almost all of the gain
 comes from the game-state and supremacy adjustment.
 
+```{python}
+code_link("code/prediction_model.py", "OLS prediction model and out-of-sample R²")
+```
+
 ::: {.callout-note appearance="simple"}
 R² values of around 0.1 are normal here. Match-level corner counts are
 dominated by Poisson-like randomness, so no pre-match model explains
@@ -693,7 +701,13 @@ table(bg_view, floatfmt=".1f")
 
 All `{python} n_combos` adjusted rating sets are profitable in the
 handicap market, at between
-`{python} f"{roi_lo:.1f}"`--`{python} f"{roi_hi:.1f}"`% ROI.
+`{python} f"{roi_lo:.1f}"`--`{python} f"{roi_hi:.1f}"`% ROI. The 19 game
+adj_nr ratings generated the most units of profit and rating with
+repeaters removed generally performed better.
+
+```{python}
+code_link("code/bet_backtest.py", "Bet selection and Asian handicap settlement")
+```
 
 ### **How the edge scales**
 
@@ -755,10 +769,11 @@ market and doesn't help totals.
 
 Each day the pipeline rebuilds the ratings, predicts corners for
 upcoming fixtures and joins the predictions to Pinnacle's live corner
-handicap prices. A bet is flagged when the model's corner supremacy
-differs from Pinnacle's by at least 0.5 corners, the threshold tested in
-section 5. A sample from one weekend in September 2026 (kick-off times
-are UK time):
+handicap prices. The output is sent to a dashboard that I can access
+anywhere alongside key analytics, team ratings and flags for potential
+data quality issues.
+
+A sample from one weekend in September 2026.
 
 ```{python}
 ps = load("predictions_sample.csv").sort_values(["Kickoff", "League"])
@@ -787,10 +802,8 @@ HTML('<div class="dash-table-wrap"><table class="dash-table"><thead><tr>'
      + "</tr></thead><tbody>" + "".join(rows) + "</tbody></table></div>")
 ```
 
-Pred is the model's predicted corners and Pin is Pinnacle's implied
-line; supremacy (Sup) is home corners minus away corners, and Diff is
-the model minus Pinnacle. For a flagged bet, EV is the expected return
-per unit staked on that side (H or A) at Pinnacle's handicap odds, with
-each side's corners treated as an independent Poisson count around its
-prediction. Where the model and the market agree, as in Hajduk Split v
-Slaven Belupo or FCSB v Petrolul Ploiesti, there's no bet.
+A value bet is identified when the model's corner supremacy differs from
+Pinnacle's by at least 0.5 corners, the optimal threshold identified in
+section 5. The dashboard also contains an EV calculation for each value
+bet, calculated using the same poisson and skellam distribution method
+outlined in section 2.
