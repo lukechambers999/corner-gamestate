@@ -65,7 +65,7 @@ function table(headers, rows, opts = {}) {
     }
     return th;
   })));
-  return el("div", { class: "table-wrap" }, el("table", { class: "lt-table" }, thead, el("tbody", {}, rows)));
+  return el("div", { class: "table-wrap" + (opts.scroll ? " scroll" : "") }, el("table", { class: "lt-table" }, thead, el("tbody", {}, rows)));
 }
 
 // ── State ──────────────────────────────────────────────────────────────
@@ -129,29 +129,25 @@ function ratingsTab(c) {
 }
 
 function fixturesTab(c) {
-  const rows = [];
-  let lastDate = null;
-  for (const f of c.priced) {
-    if (f.Date !== lastDate) {
-      rows.push(el("tr", { class: "lt-date" }, el("td", { colspan: 11 }, fmt.date(f.Date))));
-      lastDate = f.Date;
-    }
+  const rows = c.priced.map((f) => {
     const fav = Math.max(f.p.home, f.p.draw, f.p.away);
     const cell = (p) => el("td", { class: "num odds" + (p === fav ? " fav" : "") }, fmt.odds(p));
-    rows.push(el("tr", {},
+    return el("tr", {},
+      el("td", { class: "muted" }, fmt.date(f.Date)),
       el("td", { class: "team" }, f.Home), el("td", { class: "team" }, f.Away),
       el("td", { class: "num" }, fmt.n(f.home)), el("td", { class: "num" }, fmt.n(f.away)),
       el("td", { class: "num" }, fmt.n(f.total)), el("td", { class: "num" }, fmt.signed(f.sup)),
       el("td", { class: "num muted" }, fmt.pct(f.p.home)), el("td", { class: "num muted" }, fmt.pct(f.p.draw)),
       el("td", { class: "num muted" }, fmt.pct(f.p.away)),
-      cell(f.p.home), cell(f.p.draw), cell(f.p.away)));
-  }
+      cell(f.p.home), cell(f.p.draw), cell(f.p.away));
+  });
   return el("div", {},
     el("p", { class: "lt-note" },
       "Expected goals for each side, the match total and supremacy (expected home goal difference), then the 1X2 probabilities and fair decimal odds (1 / probability, no margin)."),
-    table([{ label: "Home" }, { label: "Away" }, { label: "Home xG", cls: "num" }, { label: "Away xG", cls: "num" },
+    table([{ label: "Date" }, { label: "Home" }, { label: "Away" }, { label: "Home xG", cls: "num" }, { label: "Away xG", cls: "num" },
            { label: "Total", cls: "num" }, { label: "Sup", cls: "num" }, { label: "H", cls: "num" }, { label: "D", cls: "num" },
-           { label: "A", cls: "num" }, { label: "1", cls: "num" }, { label: "X", cls: "num" }, { label: "2", cls: "num" }], rows),
+           { label: "A", cls: "num" }, { label: "1", cls: "num" }, { label: "X", cls: "num" }, { label: "2", cls: "num" }], rows,
+          { scroll: true }),
     codeLinks("fixtures"));
 }
 
