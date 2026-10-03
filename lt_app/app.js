@@ -67,7 +67,7 @@ function table(headers, rows, opts = {}) {
 }
 
 // ── State ──────────────────────────────────────────────────────────────
-const state = { data: null, params: null, tab: "ratings", sims: 10000, simResult: null, simParams: null, ratingSort: ["AS", -1] };
+const state = { data: null, params: null, tab: "table", sims: 10000, simResult: null, simParams: null, ratingSort: ["AS", -1] };
 
 function readHash() {
   const h = new URLSearchParams(location.hash.slice(1));
@@ -158,19 +158,19 @@ function tableTab(c) {
   return el("div", {},
     el("p", { class: "lt-note" },
       `Current points plus the expected points from the ${c.priced.length} remaining fixtures (3 × win probability + draw probability). The arrow shows the change from the current position.`),
-    table([{ label: "#" }, { label: "Team" }, { label: "Now", cls: "num" }, { label: "MP", cls: "num" }, { label: "W", cls: "num" },
+    table([{ label: "#" }, { label: "Team" }, { label: "W", cls: "num" },
            { label: "D", cls: "num" }, { label: "L", cls: "num" }, { label: "GF", cls: "num" }, { label: "GA", cls: "num" },
-           { label: "GD", cls: "num" }, { label: "Pts", cls: "num" }],
+           { label: "GD", cls: "num" }, { label: "So far", cls: "num" }, { label: "Pred pts", cls: "num" }],
       c.expected.map((r, i) => {
         const move = curPos[r.team] - (i + 1);
         return el("tr", {},
           el("td", { class: "muted" }, i + 1,
             move ? el("span", { class: move > 0 ? "lt-up" : "lt-down" }, move > 0 ? ` ▲${move}` : ` ▼${-move}`) : null),
           el("td", { class: "team" }, r.team),
-          el("td", { class: "num muted" }, r.cur.Pts),
-          el("td", { class: "num" }, r.MP), el("td", { class: "num" }, fmt.n(r.W, 1)), el("td", { class: "num" }, fmt.n(r.D, 1)),
+          el("td", { class: "num" }, fmt.n(r.W, 1)), el("td", { class: "num" }, fmt.n(r.D, 1)),
           el("td", { class: "num" }, fmt.n(r.L, 1)), el("td", { class: "num" }, fmt.n(r.GF, 1)), el("td", { class: "num" }, fmt.n(r.GA, 1)),
-          el("td", { class: "num" }, fmt.signed(r.GD, 1)), el("td", { class: "num strong" }, fmt.n(r.Pts, 1)));
+          el("td", { class: "num" }, fmt.signed(r.GD, 1)), el("td", { class: "num muted" }, r.cur.Pts),
+          el("td", { class: "num strong" }, fmt.n(r.Pts, 1)));
       })),
     codeLinks("table"));
 }
@@ -226,9 +226,9 @@ function seasonTab(c) {
 }
 
 const TABS = [
-  ["ratings", "Ratings", ratingsTab],
-  ["fixtures", "Fixtures & prices", fixturesTab],
   ["table", "Predicted table", tableTab],
+  ["ratings", "Team ratings", ratingsTab],
+  ["fixtures", "Fixtures & prices", fixturesTab],
   ["season", "Season odds", seasonTab],
 ];
 
@@ -274,8 +274,8 @@ function buildControls() {
     el("div", { class: "lt-controls-foot" },
       ui.reset,
       el("span", { class: "muted small" },
-        `Optimised: ${d.n_matches} matches, weights ${d.goals_wgt} / ${d.xG_wgt} / ${d.asian_wgt} (goals / xG / odds). ` +
-        `Out-of-sample error against the market (MAE): total ${meta.test_mae.total} goals, supremacy ${meta.test_mae.sup}.`)));
+        `Optimised: ${d.n_matches} matches, weights ${d.goals_wgt} / ${d.xG_wgt} / ${d.asian_wgt} (goals / xG / odds), ` +
+        "found by a grid search for the window and weights that best predicted the market's totals and supremacy in past seasons.")));
 }
 
 function syncControls() {

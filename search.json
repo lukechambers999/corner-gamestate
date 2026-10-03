@@ -4,21 +4,21 @@
     "href": "long-term-model.html",
     "title": "Season Outrights Model",
     "section": "",
-    "text": "Rating a team on goals alone is noisy, on xG alone ignores finishing and goalkeeping, and on betting lines alone simply copies the market. This model blends all three into attack and defence ratings, prices every remaining fixture from them, and simulates the rest of the season to put odds on the title, the top four, the top six and relegation. It covers the top five European leagues, updates daily, and every number in the app is recalculated in your browser as you move the sliders.\n\n\n\n5 leagues modelled\n\n\n15,893 matches since 2015\n\n\n1,502 fixtures left to price"
-  },
-  {
-    "objectID": "long-term-model.html#introduction",
-    "href": "long-term-model.html#introduction",
-    "title": "Season Outrights Model",
-    "section": "",
-    "text": "Rating a team on goals alone is noisy, on xG alone ignores finishing and goalkeeping, and on betting lines alone simply copies the market. This model blends all three into attack and defence ratings, prices every remaining fixture from them, and simulates the rest of the season to put odds on the title, the top four, the top six and relegation. It covers the top five European leagues, updates daily, and every number in the app is recalculated in your browser as you move the sliders.\n\n\n\n5 leagues modelled\n\n\n15,893 matches since 2015\n\n\n1,502 fixtures left to price"
+    "text": "Pick a league, then use the sliders to change how many recent matches (up to one season) feed each rating and how much weight goals, xG and the betting market get. The odds weight fills whatever is left so the three always add up to 1. Reset to optimised restores the combination that tracked that league’s market most closely in past seasons (section 4). Your league and settings are saved in the page link, so you can share a particular set-up with someone.\nLoading the model…\n\nThe data was last updated on 3 October 2026, covering the 2026/27 season so far. Results and fixtures are refreshed every day."
   },
   {
     "objectID": "long-term-model.html#the-model",
     "href": "long-term-model.html#the-model",
     "title": "Season Outrights Model",
-    "section": "2. The model",
-    "text": "2. The model\nPick a league, then use the sliders to change how many recent matches (up to one season) feed each rating and how much weight goals, xG and the betting market get. The odds weight fills whatever is left so the three always add up to 1. Reset to optimised restores the combination that tracked that league’s market most closely in past seasons (section 4). Your league and settings are saved in the page link, so you can share a particular set-up with someone.\nLoading the model…\n\nThe data was last updated on 3 October 2026, covering the 2026/27 season so far. Results and fixtures are refreshed every day."
+    "section": "",
+    "text": "Pick a league, then use the sliders to change how many recent matches (up to one season) feed each rating and how much weight goals, xG and the betting market get. The odds weight fills whatever is left so the three always add up to 1. Reset to optimised restores the combination that tracked that league’s market most closely in past seasons (section 4). Your league and settings are saved in the page link, so you can share a particular set-up with someone.\nLoading the model…\n\nThe data was last updated on 3 October 2026, covering the 2026/27 season so far. Results and fixtures are refreshed every day."
+  },
+  {
+    "objectID": "long-term-model.html#overview",
+    "href": "long-term-model.html#overview",
+    "title": "Season Outrights Model",
+    "section": "2. Overview",
+    "text": "2. Overview\n\nRating a team on goals alone is noisy, on xG alone ignores finishing and goalkeeping, and on betting lines alone simply copies the market. This model blends all three into attack and defence ratings, prices every remaining fixture from them, and simulates the rest of the season to put odds on the title, the top four, the top six and relegation. It covers the top five European leagues, updates daily, and every number in the app is recalculated in your browser as you move the sliders."
   },
   {
     "objectID": "long-term-model.html#data",
@@ -47,20 +47,6 @@
     "title": "Season Outrights Model",
     "section": "6. Simulating the season",
     "text": "6. Simulating the season\nExpected points give the most likely finishing order, but not how likely each outcome is. For that, the rest of the season is simulated thousands of times. Each fixture is drawn as a home win, draw or away win from its 1X2 probabilities, and the final positions are recorded. The share of simulations in which a team wins the league, finishes in the top 4 or top 6, or ends in the bottom 3 is its probability, and 1 / probability is its fair price.\n\n\nMonte Carlo: simulate_season() → code/lt/simulate.py"
-  },
-  {
-    "objectID": "long-term-model.html#limitations",
-    "href": "long-term-model.html#limitations",
-    "title": "Season Outrights Model",
-    "section": "7. Limitations",
-    "text": "7. Limitations\n\nOne promotion factor per league. Every promoted team in a league is scaled by the same average factor, whatever its budget or squad changes. After a few top-flight matches the market’s own lines take over.\nSquad changes. The ratings don’t react to transfers, injuries, suspensions or manager changes until those show up in results and prices.\nCorrelated inputs. Betting lines are partly built from past goals and xG, so the three metrics overlap. The weights describe what predicts the market best, not three independent signals.\nEqual weighting inside the window. Every match in the window counts the same. Weighting recent matches more would react faster but could over-read a tough run of fixtures, unless the opposition’s strength is accounted for.\nSimplified simulation. Simulated matches give points only, with no goals, so teams level on points are ordered at random instead of by goal difference. Ratings are also fixed for the rest of the season and don’t update after each simulated result. Play-offs (the Bundesliga and Ligue 1 relegation play-offs) aren’t modelled.\nMarket fit is one yardstick. Matching the market on MAE doesn’t show the model can beat it. The corner model goes a step further and backtests against Pinnacle prices, which is the natural next step here."
-  },
-  {
-    "objectID": "long-term-model.html#code",
-    "href": "long-term-model.html#code",
-    "title": "Season Outrights Model",
-    "section": "Code",
-    "text": "Code\nThe model’s Python code is in code/lt/, adapted from the original notebook. The browser version that runs this page is in lt_app/, and its outputs are checked against the Python version at the default settings. The daily data snapshot is in snapshots/lt/, built by _build/make_lt_snapshots.py from a scheduled GitHub Action."
   },
   {
     "objectID": "index.html",
