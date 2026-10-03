@@ -14,11 +14,14 @@ editor:
 
 ```{python}
 #| include: false
+import hashlib
 import json
+from pathlib import Path
 
 import pandas as pd
 from _charts import SNAP, code_link, table
 
+LT_APP = Path("lt_app")
 index = json.loads((SNAP / "lt" / "index.json").read_text(encoding="utf-8"))
 leagues = [json.loads((SNAP / "lt" / l["file"]).read_text(encoding="utf-8")) for l in index["leagues"]]
 metas = [lt["meta"] for lt in leagues]
@@ -67,9 +70,15 @@ combination that tracked that league's market most closely in past
 seasons (section 4). Your league and settings are saved in the page
 link, so you can share a particular set-up with someone.
 
-```{=html}
+```{python}
+#| echo: false
+#| output: asis
+# Version the app's scripts by content so browsers fetch fresh copies after each deploy.
+app_ver = hashlib.sha1(b"".join((LT_APP / f).read_bytes() for f in ("app.js", "model.js"))).hexdigest()[:10]
+print(f"""```{{=html}}
 <div id="lt-app"><p class="lt-loading">Loading the model…</p></div>
-<script type="module" src="lt_app/app.js"></script>
+<script type="module" src="lt_app/app.js?v={app_ver}"></script>
+```""")
 ```
 
 The data was last updated on `{python} updated`, covering the
