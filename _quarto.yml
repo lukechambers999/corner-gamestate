@@ -10,20 +10,20 @@ project:
     - snapshots/lt/
 
 website:
-  title: "Corners & Game State"
-  site-url: https://lukechambers999.github.io/corner-gamestate/
-  repo-url: https://github.com/lukechambers999/corner-gamestate
+  title: "Luke Chambers - Data, Modelling and Analytics Portfolio"
+  site-url: https://lukechambers999.github.io/portfolio_2026/
+  repo-url: https://github.com/lukechambers999/portfolio_2026
   navbar:
     left:
       - href: index.qmd
-        text: Analysis
+        text: Game State Corner Model
+      - href: long-term-model.qmd
+        text: Season Outrights Model
       - href: methodology.qmd
         text: Methodology
-      - href: long-term-model.qmd
-        text: Long-term model
     right:
       - icon: github
-        href: https://github.com/lukechambers999/corner-gamestate
+        href: https://github.com/lukechambers999/portfolio_2026
         aria-label: Code on GitHub
 
 format:

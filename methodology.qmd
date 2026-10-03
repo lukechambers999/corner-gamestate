@@ -1,6 +1,6 @@
 ---
 title: "Methodology"
-subtitle: "Definitions, data handling and backtest design"
+subtitle: "Definitions, data handling and backtest design for the Game State Corner Model"
 ---
 
 ## Definitions
@@ -59,10 +59,10 @@ excluded from fitting.
 ## Code
 
 The processing code for the original study is in the
-[`code/`](https://github.com/lukechambers999/corner-gamestate/tree/main/code)
+[`code/`](https://github.com/lukechambers999/portfolio_2026/tree/main/code)
 folder of this site's repository. The small data snapshots behind every chart and table are in
-[`snapshots/`](https://github.com/lukechambers999/corner-gamestate/tree/main/snapshots).
+[`snapshots/`](https://github.com/lukechambers999/portfolio_2026/tree/main/snapshots).
 
-A second, interactive project on this site, the
-[Long-term model](long-term-model.qmd), rates teams on goals, xG and
+The second project on this site, the interactive
+[Season Outrights Model](long-term-model.qmd), rates teams on goals, xG and
 betting lines and simulates the rest of the season.

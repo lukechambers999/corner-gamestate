@@ -9,7 +9,7 @@ import plotly.io as pio
 from IPython.display import HTML, Markdown, display
 
 SNAP = Path(__file__).resolve().parent / "snapshots"
-REPO = "https://github.com/lukechambers999/corner-gamestate/blob/main"
+REPO = "https://github.com/lukechambers999/portfolio_2026/blob/main"
 
 # Game state -> colour. Fixed everywhere on the site.
 STATE_COLORS = {"Winning": "#1baf7a", "Drawing": "#2a78d6", "Losing": "#eb6834"}

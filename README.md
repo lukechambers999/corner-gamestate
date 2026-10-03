@@ -1,9 +1,14 @@
-# Corners & Game State
+# Luke Chambers - Data, Modelling and Analytics Portfolio
 
-Source for the write-up at **https://lukechambers999.github.io/corner-gamestate/**,
-plus an interactive Long-term season model page (`long-term-model.qmd`).
-It covers building corner ratings that correct for game state, supremacy and
-repeater corners, and backtesting them against Pinnacle's corner markets.
+Source for the site at **https://lukechambers999.github.io/portfolio_2026/**,
+which holds two projects:
+
+- **Game State Corner Model** (`index.qmd`, with `methodology.qmd`): corner
+  ratings that correct for game state, supremacy and repeater corners,
+  backtested against Pinnacle's corner markets.
+- **Season Outrights Model** (`long-term-model.qmd`): an interactive app that
+  rates top-5 league teams on goals, xG and betting lines, prices the remaining
+  fixtures and simulates the season. Its data updates daily.
 
 ## Layout
 
@@ -15,8 +20,8 @@ repeater corners, and backtesting them against Pinnacle's corner markets.
 | `code/` | Processing code for the original study, linked from the article |
 | `_build/make_snapshots.py` | Regenerates `snapshots/` from the raw data (needs the private data folders next to this repo) |
 | `_charts.py` | Shared Plotly styling |
-| `long-term-model.qmd` | Long-term model page: write-up plus the embedded interactive app |
-| `code/lt/` | Long-term model code (adapted from `portfolio/LT_model.ipynb`), linked from that page |
+| `long-term-model.qmd` | Season Outrights Model page: write-up plus the embedded interactive app |
+| `code/lt/` | Season Outrights Model code (adapted from `portfolio/LT_model.ipynb`), linked from that page |
 | `lt_app/` | The in-browser app: `model.js` mirrors `code/lt/`, `app.js` is the UI |
 | `snapshots/lt/` | Per-league JSON the app runs on (`index.json` lists the leagues) |
 | `_build/make_lt_snapshots.py` | Regenerates `snapshots/lt/` for the top-5 leagues: scrapes Understat, joins the totalcorner lines, fits HA, rho, the default window/weights and the promotion factors |
@@ -33,9 +38,9 @@ quarto preview           # live-reloading local preview
 Edit the text in `index.qmd`, then commit and push. The GitHub Action re-renders
 the site and publishes it to the `gh-pages` branch.
 
-## Long-term model data
+## Season Outrights Model data
 
-The `Update Long-term model data` Action rebuilds `snapshots/lt/` every day at
+The `Update Season Outrights Model data` Action rebuilds `snapshots/lt/` every day at
 07:23 UTC, after tc_scraper's daily pipeline has updated
 `gdrive:/TC_Scraper/totalcorner_data_finished_master/`. It needs the
 `RCLONE_CONFIG` repo secret (base64 of an `rclone.conf` with a `gdrive` remote,

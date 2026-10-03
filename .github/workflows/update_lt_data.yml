@@ -1,4 +1,4 @@
-name: Update Long-term model data
+name: Update Season Outrights Model data
 
 # Daily: pulls the top-5 league totalcorner CSVs from Google Drive (written by
 # tc_scraper's master_daily_pipeline, which is dispatched around 04:00 UTC and
@@ -63,7 +63,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898+github-actions[bot]@users.noreply.github.com"
           git add snapshots/lt/
-          git commit -m "Update Long-term model data ($(date -u +%F))"
+          git commit -m "Update Season Outrights Model data ($(date -u +%F))"
           git push
           echo "changed=true" >> "$GITHUB_OUTPUT"
 

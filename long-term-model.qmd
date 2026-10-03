@@ -1,5 +1,5 @@
 ---
-title: "A Long-Term Season Model"
+title: "Season Outrights Model"
 subtitle: "Team ratings from goals, xG and betting lines, turned into match prices and season outcome odds"
 author: "Luke Chambers"
 format:
@@ -293,15 +293,15 @@ code_link("code/lt/simulate.py", "Monte Carlo: simulate_season()")
 ## Code
 
 The model's Python code is in
-[`code/lt/`](https://github.com/lukechambers999/corner-gamestate/tree/main/code/lt),
+[`code/lt/`](https://github.com/lukechambers999/portfolio_2026/tree/main/code/lt),
 adapted from the original
 [notebook](https://github.com/lukechambers999/portfolio/blob/main/LT_model.ipynb).
 The browser version that runs this page is in
-[`lt_app/`](https://github.com/lukechambers999/corner-gamestate/tree/main/lt_app),
+[`lt_app/`](https://github.com/lukechambers999/portfolio_2026/tree/main/lt_app),
 and its outputs are checked against the Python version at the default
 settings. The daily data snapshot is in
-[`snapshots/lt/`](https://github.com/lukechambers999/corner-gamestate/tree/main/snapshots/lt),
+[`snapshots/lt/`](https://github.com/lukechambers999/portfolio_2026/tree/main/snapshots/lt),
 built by
-[`_build/make_lt_snapshots.py`](https://github.com/lukechambers999/corner-gamestate/blob/main/_build/make_lt_snapshots.py)
+[`_build/make_lt_snapshots.py`](https://github.com/lukechambers999/portfolio_2026/blob/main/_build/make_lt_snapshots.py)
 from a scheduled
-[GitHub Action](https://github.com/lukechambers999/corner-gamestate/blob/main/.github/workflows/update_lt_data.yml).
+[GitHub Action](https://github.com/lukechambers999/portfolio_2026/blob/main/.github/workflows/update_lt_data.yml).

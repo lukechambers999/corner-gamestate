@@ -1,5 +1,5 @@
 ---
-title: "A Game State Adjusted Corner Model"
+title: "Game State Corner Model"
 subtitle: "Beating Pinnacle corner markets by building corner ratings that see past the scoreline"
 author: "Luke Chambers"
 editor: 
