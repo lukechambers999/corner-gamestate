@@ -25,10 +25,6 @@ metas = [lt["meta"] for lt in leagues]
 
 updated_ts = pd.Timestamp(index["updated"])
 updated = f"{updated_ts.day} {updated_ts:%B %Y}"
-n_leagues = len(leagues)
-n_history = f"{sum(m['n_history_matches'] for m in metas):,}"
-n_fixtures = f"{sum(len(lt['fixtures']) for lt in leagues):,}"
-season_from = min(m["history_from"] for m in metas)[:4]
 season = metas[0]["season"]
 match_rate = sum(m["n_lined_matches"] for m in metas) / sum(m["n_history_matches"] for m in metas)
 match_pct = f"{match_rate * 100:.1f}"
@@ -61,34 +57,7 @@ def fitted_table():
     return table(pd.DataFrame(rows), floatfmt=("", "", ".1f", ".1f", ".1f", ".3f", ".3f", "", ".3f", "", "", ""))
 ```
 
-## 1. Introduction
-
-::: lede
-Rating a team on goals alone is noisy, on xG alone ignores finishing
-and goalkeeping, and on betting lines alone simply copies the market.
-This model blends all three into attack and defence ratings, prices
-every remaining fixture from them, and simulates the rest of the season
-to put odds on the title, the top four, the top six and relegation.
-It covers the top five European leagues, updates daily, and every
-number in the app is recalculated in your browser as you move the
-sliders.
-:::
-
-::: stat-row
-::: stat
-[`{python} n_leagues`]{.num} [leagues modelled]{.lbl}
-:::
-
-::: stat
-[`{python} n_history`]{.num} [matches since `{python} season_from`]{.lbl}
-:::
-
-::: stat
-[`{python} n_fixtures`]{.num} [fixtures left to price]{.lbl}
-:::
-:::
-
-## 2. The model
+## 1. The model
 
 Pick a league, then use the sliders to change how many recent matches
 (up to one season) feed each rating and how much weight goals, xG and
@@ -106,6 +75,19 @@ link, so you can share a particular set-up with someone.
 The data was last updated on `{python} updated`, covering the
 `{python} season.replace("/20", "/")` season so far. Results and
 fixtures are refreshed every day.
+
+## 2. Overview
+
+::: lede
+Rating a team on goals alone is noisy, on xG alone ignores finishing
+and goalkeeping, and on betting lines alone simply copies the market.
+This model blends all three into attack and defence ratings, prices
+every remaining fixture from them, and simulates the rest of the season
+to put odds on the title, the top four, the top six and relegation.
+It covers the top five European leagues, updates daily, and every
+number in the app is recalculated in your browser as you move the
+sliders.
+:::
 
 ## 3. Data
 
@@ -263,45 +245,3 @@ probability is its fair price.
 ```{python}
 code_link("code/lt/simulate.py", "Monte Carlo: simulate_season()")
 ```
-
-## 7. Limitations
-
-- **One promotion factor per league.** Every promoted team in a league
-  is scaled by the same average factor, whatever its budget or squad
-  changes. After a few top-flight matches the market's own lines take
-  over.
-- **Squad changes.** The ratings don't react to transfers, injuries,
-  suspensions or manager changes until those show up in results and
-  prices.
-- **Correlated inputs.** Betting lines are partly built from past goals
-  and xG, so the three metrics overlap. The weights describe what
-  predicts the market best, not three independent signals.
-- **Equal weighting inside the window.** Every match in the window
-  counts the same. Weighting recent matches more would react faster but
-  could over-read a tough run of fixtures, unless the opposition's
-  strength is accounted for.
-- **Simplified simulation.** Simulated matches give points only, with
-  no goals, so teams level on points are ordered at random instead of by
-  goal difference. Ratings are also fixed for the rest of the season and
-  don't update after each simulated result. Play-offs (the Bundesliga
-  and Ligue 1 relegation play-offs) aren't modelled.
-- **Market fit is one yardstick.** Matching the market on MAE doesn't
-  show the model can beat it. The [corner model](index.qmd) goes a step
-  further and backtests against Pinnacle prices, which is the natural
-  next step here.
-
-## Code
-
-The model's Python code is in
-[`code/lt/`](https://github.com/lukechambers999/portfolio_2026/tree/main/code/lt),
-adapted from the original
-[notebook](https://github.com/lukechambers999/portfolio/blob/main/LT_model.ipynb).
-The browser version that runs this page is in
-[`lt_app/`](https://github.com/lukechambers999/portfolio_2026/tree/main/lt_app),
-and its outputs are checked against the Python version at the default
-settings. The daily data snapshot is in
-[`snapshots/lt/`](https://github.com/lukechambers999/portfolio_2026/tree/main/snapshots/lt),
-built by
-[`_build/make_lt_snapshots.py`](https://github.com/lukechambers999/portfolio_2026/blob/main/_build/make_lt_snapshots.py)
-from a scheduled
-[GitHub Action](https://github.com/lukechambers999/portfolio_2026/blob/main/.github/workflows/update_lt_data.yml).
