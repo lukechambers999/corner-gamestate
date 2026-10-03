@@ -1,5 +1,7 @@
 // Interactive Season Outrights Model: controls, tabs and tables. The model itself is in model.js.
-import { teamRatings, priceFixtures, currentTable, expectedTable, simulateSeason, checkAgainstPython } from "./model.js";
+// model.js inherits this script's ?v= version tag, so a deploy refreshes both files together.
+const { teamRatings, priceFixtures, currentTable, expectedTable, simulateSeason, checkAgainstPython } =
+  await import("./model.js" + new URL(import.meta.url).search);
 
 const REPO = "https://github.com/lukechambers999/portfolio_2026/blob/main";
 const SNAP = "snapshots/lt/";

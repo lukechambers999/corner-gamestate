@@ -221,7 +221,7 @@ window.Quarto = {
 <h2 class="anchored" data-anchor-id="the-model">1. The model</h2>
 <p>Pick a league, then use the sliders to change how many recent matches (up to one season) feed each rating and how much weight goals, xG and the betting market get. The odds weight fills whatever is left so the three always add up to 1. <strong>Reset to optimised</strong> restores the combination that tracked that league’s market most closely in past seasons (section 4). Your league and settings are saved in the page link, so you can share a particular set-up with someone.</p>
 <div id="lt-app"><p class="lt-loading">Loading the model…</p></div>
-<script type="module" src="lt_app/app.js"></script>
+<script type="module" src="lt_app/app.js?v=3051bf6617"></script>
 <p>The data was last updated on 3 October 2026, covering the 2026/27 season so far. Results and fixtures are refreshed every day.</p>
 </section>
 <section id="overview" class="level2">
@@ -237,13 +237,13 @@ window.Quarto = {
 <li><strong>Understat</strong> for each match’s goals and expected goals (xG), and this season’s remaining fixtures. It is scraped fresh for every update, back to the 2015/16 season.</li>
 <li><strong>totalcorner.com</strong> for the pre-match Asian handicap and goal line, for both the top flight and the division below. These come from the daily scrape that also feeds the <a href="./index.html">corner model</a>. The goal line is solved for the Poisson goals rate that prices it fairly, and the handicap for the goal difference that prices it fairly under a Skellam model. Together they give the market’s expected goals for each side, called <em>Asian goals</em> here. This is the same odds-to-goals step used in the corner model.</li>
 </ul>
-<div id="a585ec41" class="cell" data-execution_count="2">
-<div class="cell-output cell-output-display cell-output-markdown" data-execution_count="2">
+<div id="ada33858" class="cell" data-execution_count="3">
+<div class="cell-output cell-output-display cell-output-markdown" data-execution_count="3">
 <p><a href="https://github.com/lukechambers999/portfolio_2026/blob/main/code/lt/understat.py" class="code-link">Understat scrape and team-name matching → <code>code/lt/understat.py</code></a></p>
 </div>
 </div>
-<div id="5d0c878d" class="cell" data-execution_count="3">
-<div class="cell-output cell-output-display cell-output-markdown" data-execution_count="3">
+<div id="15bef626" class="cell" data-execution_count="4">
+<div class="cell-output cell-output-display cell-output-markdown" data-execution_count="4">
 <p><a href="https://github.com/lukechambers999/portfolio_2026/blob/main/code/lt/asian_lines.py" class="code-link">Odds to expected goals for each side → <code>code/lt/asian_lines.py</code></a></p>
 </div>
 </div>
@@ -258,14 +258,14 @@ window.Quarto = {
 </span></p>
 <p>where <span class="math inline">w_g + w_x + w_o = 1</span>, and the same for goals, xG and Asian goals conceded.</p>
 <p>The window and weights were chosen by grid search, separately for each league. For every window from 5 to 29 matches and every weight combination, each past match was predicted using only ratings from before it. The predictions were then scored on mean absolute error (MAE) against the market’s own total and supremacy for that match. Supremacy counted for 75% of the score, since this model is mainly for finding supremacy differences. The search used seasons up to 2022/23. The winning combination was then scored on 2023/24 onwards, which the search never saw.</p>
-<div id="bfed2372" class="cell" data-execution_count="4">
-<div class="cell-output cell-output-display cell-output-markdown" data-execution_count="4">
+<div id="ef6e4c1c" class="cell" data-execution_count="5">
+<div class="cell-output cell-output-display cell-output-markdown" data-execution_count="5">
 <p><a href="https://github.com/lukechambers999/portfolio_2026/blob/main/code/lt/optimise.py#L73-L98" class="code-link">Grid search: find_optimal_parameters() → <code>code/lt/optimise.py</code></a></p>
 </div>
 </div>
 <p>The leagues agree closely. Every one picked a window of 16 to 18 matches with 70% to 80% of the weight on the odds. The heavy odds weight is expected, because the market already contains most of what goals and xG say about a team. The small goals and xG weights pick up recent performance the lines may not have caught up with yet. The table below gives each league’s fitted values. The MAE columns are the out-of-sample error against the market, in goals.</p>
-<div id="0cb25825" class="cell" data-execution_count="5">
-<div class="cell-output cell-output-display cell-output-markdown" data-execution_count="5">
+<div id="4ccf56ea" class="cell" data-execution_count="6">
+<div class="cell-output cell-output-display cell-output-markdown" data-execution_count="6">
 <div class="table-wrap">
 <table class="caption-top table table-sm table-striped small">
 <colgroup>
@@ -378,8 +378,8 @@ window.Quarto = {
 <h3 class="anchored" data-anchor-id="promoted-teams">Promoted teams</h3>
 <p>A newly promoted team has few top-flight matches to rate it on, and none at all at the start of the season. Its matches from the season it won promotion are used instead, with the market’s expected goals scaled to top-flight level. Each league’s scaling comes from its own past promotions (165 across the five leagues). For each one, the team’s average Asian goals in its first top-flight season are compared with its promotion season. Depending on the league, promoted teams’ expected goals scored fell by 21% to 33% and their expected goals conceded rose by 49% to 67%.</p>
 <p>Only the odds-based metric can be carried over this way, because Understat has no second-division goals or xG. Within the window, goals and xG are averaged over the team’s top-flight matches. A team with no top-flight matches yet is rated on its scaled Asian goals alone. In the app, these teams are tagged <strong>P</strong> with the number of second-division matches in their window.</p>
-<div id="85add8a7" class="cell" data-execution_count="6">
-<div class="cell-output cell-output-display cell-output-markdown" data-execution_count="6">
+<div id="e4f39e12" class="cell" data-execution_count="7">
+<div class="cell-output cell-output-display cell-output-markdown" data-execution_count="7">
 <p><a href="https://github.com/lukechambers999/portfolio_2026/blob/main/code/lt/promotion.py" class="code-link">Promotion factors and adjustment → <code>code/lt/promotion.py</code></a></p>
 </div>
 </div>
@@ -395,14 +395,14 @@ window.Quarto = {
 \lambda_{away} = \frac{\text{Att}_{away}\times\text{Def}_{home}}{\overline{\text{Def}}}
 </span></p>
 <p>Home advantage is then moved from the away side to the home side. The home team gains a fixed share of the match’s expected goals (9.2% to 14.6% depending on the league) and the total stays the same. That share is the home-minus-away goal difference as a proportion of all goals in the league’s non-COVID history.</p>
-<div id="254075c2" class="cell" data-execution_count="7">
-<div class="cell-output cell-output-display cell-output-markdown" data-execution_count="7">
+<div id="6d980da8" class="cell" data-execution_count="8">
+<div class="cell-output cell-output-display cell-output-markdown" data-execution_count="8">
 <p><a href="https://github.com/lukechambers999/portfolio_2026/blob/main/code/lt/ratings.py#L73-L83" class="code-link">Expected goals: predict_goals() → <code>code/lt/ratings.py</code></a></p>
 </div>
 </div>
 <p>Two independent Poisson distributions turn the expected goals into a probability for every scoreline up to 10-10. Independent Poissons slightly under-price low-scoring draws, so the Dixon-Coles correction reweights 0-0, 0-1, 1-0 and 1-1 using one parameter, ρ. ρ is fitted for each league by maximum likelihood on past scorelines, with the market’s expected goals as the inputs. Adding up the scorelines where the home side wins, where it’s level, and where the away side wins gives the home, draw and away probabilities. Their inverses are the fair (margin-free) 1X2 odds.</p>
-<div id="d352be28" class="cell" data-execution_count="8">
-<div class="cell-output cell-output-display cell-output-markdown" data-execution_count="8">
+<div id="93c8efc2" class="cell" data-execution_count="9">
+<div class="cell-output cell-output-display cell-output-markdown" data-execution_count="9">
 <p><a href="https://github.com/lukechambers999/portfolio_2026/blob/main/code/lt/dixon_coles.py#L20-L62" class="code-link">Dixon-Coles scorelines and 1X2 → <code>code/lt/dixon_coles.py</code></a></p>
 </div>
 </div>
@@ -411,8 +411,8 @@ window.Quarto = {
 <section id="simulating-the-season" class="level2">
 <h2 class="anchored" data-anchor-id="simulating-the-season">6. Simulating the season</h2>
 <p>Expected points give the most likely finishing order, but not how likely each outcome is. For that, the rest of the season is simulated thousands of times. Each fixture is drawn as a home win, draw or away win from its 1X2 probabilities, and the final positions are recorded. The share of simulations in which a team wins the league, finishes in the top 4 or top 6, or ends in the bottom 3 is its probability, and 1 / probability is its fair price.</p>
-<div id="f0e4d131" class="cell" data-execution_count="9">
-<div class="cell-output cell-output-display cell-output-markdown" data-execution_count="9">
+<div id="1c50023f" class="cell" data-execution_count="10">
+<div class="cell-output cell-output-display cell-output-markdown" data-execution_count="10">
 <p><a href="https://github.com/lukechambers999/portfolio_2026/blob/main/code/lt/simulate.py" class="code-link">Monte Carlo: simulate_season() → <code>code/lt/simulate.py</code></a></p>
 </div>
 </div>
