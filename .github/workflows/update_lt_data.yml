@@ -1,0 +1,74 @@
+name: Update Long-term model data
+
+# Daily: pulls the top-5 league totalcorner CSVs from Google Drive (written by
+# tc_scraper's master_daily_pipeline, which is dispatched around 04:00 UTC and
+# finishes by about 05:30), scrapes Understat, rebuilds snapshots/lt/ and, if
+# anything changed, commits it and republishes the site.
+
+on:
+  schedule:
+    - cron: '23 7 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: write   # to dispatch publish.yml (pushes made with GITHUB_TOKEN don't trigger it)
+
+concurrency:
+  group: update-lt-data
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: _build/requirements_lt.txt
+
+      - run: pip install -r _build/requirements_lt.txt
+
+      - name: Install rclone
+        run: curl https://rclone.org/install.sh | sudo bash
+
+      - name: Decode rclone config
+        run: |
+          mkdir -p ~/.config/rclone
+          echo "${{ secrets.RCLONE_CONFIG }}" | base64 --decode > ~/.config/rclone/rclone.conf
+
+      - name: Download top-5 league CSVs from Google Drive
+        run: |
+          mkdir -p tc_data
+          rclone copy gdrive:/TC_Scraper/totalcorner_data_finished_master/ tc_data/ -v \
+            --include "{EnglandPremierLeague,EnglandChampionship,SpainLaLiga,SpainSegunda,ItalySerieA,ItalySerieB,GermanyBundesligaI,GermanyBundesligaII,FranceLigue1,FranceLigue2}.csv"
+          ls -la tc_data
+
+      - name: Build snapshots
+        run: python _build/make_lt_snapshots.py --tc tc_data
+
+      - name: Commit if changed
+        id: commit
+        run: |
+          # index.json carries the build date, so only commit when a league file changed
+          if [ -z "$(git status --porcelain -- snapshots/lt/ ':!snapshots/lt/index.json')" ]; then
+            echo "No data changes."
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898+github-actions[bot]@users.noreply.github.com"
+          git add snapshots/lt/
+          git commit -m "Update Long-term model data ($(date -u +%F))"
+          git push
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+
+      - name: Republish site
+        if: steps.commit.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run publish.yml --ref main

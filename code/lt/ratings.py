@@ -58,7 +58,10 @@ def current_ratings(team_strength, current_teams, n_matches, goals_wgt, xG_wgt, 
     # Means skip missing values: promoted teams' second-division rows have Asian goals only
     ratings = recent.groupby('Team')[COLS_TO_AVG_TEAM].mean().add_suffix('_roll').reset_index()
 
-    # A team with no goals or xG in its window falls back on its Asian goals average
+    # A window with no betting lines (matches not yet scraped) falls back on xG, and a team with
+    # no goals or xG in its window (all second-division matches) on its Asian goals average
+    ratings['Asian_for_roll'] = ratings['Asian_for_roll'].fillna(ratings['xG_for_roll'])
+    ratings['Asian_conc_roll'] = ratings['Asian_conc_roll'].fillna(ratings['xG_conc_roll'])
     for col, asian in [('GoalsScored', 'Asian_for'), ('xG_for', 'Asian_for'),
                        ('GoalsConceded', 'Asian_conc'), ('xG_conc', 'Asian_conc')]:
         ratings[f'{col}_roll'] = ratings[f'{col}_roll'].fillna(ratings[f'{asian}_roll'])

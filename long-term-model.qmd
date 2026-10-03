@@ -5,6 +5,8 @@ author: "Luke Chambers"
 format:
   html:
     css: [styles.css, lt_app/app.css]
+execute:
+  freeze: false  # re-run on every publish so the numbers follow the daily data update
 editor:
   markdown:
     wrap: 72
@@ -13,22 +15,50 @@ editor:
 ```{python}
 #| include: false
 import json
-from _charts import SNAP, code_link
 
-lt = json.loads((SNAP / "lt" / "serie_a.json").read_text(encoding="utf-8"))
-meta = lt["meta"]
-d = meta["defaults"]
-n_results = len(lt["results"])
-n_fixtures = len(lt["fixtures"])
-n_history = f"{meta['n_history_matches']:,}"
-season_from = meta["history_from"][:4]
-ha_pct = f"{meta['HA'] * 100:.1f}"
-rho = f"{meta['rho']:.3f}"
-mae_total, mae_sup = meta["test_mae"]["total"], meta["test_mae"]["sup"]
-w_g, w_x, w_o = (f"{d[k]:.0%}" for k in ("goals_wgt", "xG_wgt", "asian_wgt"))
-promo = meta["promotion"]
-promo_for_pct = f"{(1 - promo['for']) * 100:.0f}"
-promo_conc_pct = f"{(promo['conc'] - 1) * 100:.0f}"
+import pandas as pd
+from _charts import SNAP, code_link, table
+
+index = json.loads((SNAP / "lt" / "index.json").read_text(encoding="utf-8"))
+leagues = [json.loads((SNAP / "lt" / l["file"]).read_text(encoding="utf-8")) for l in index["leagues"]]
+metas = [lt["meta"] for lt in leagues]
+
+updated_ts = pd.Timestamp(index["updated"])
+updated = f"{updated_ts.day} {updated_ts:%B %Y}"
+n_leagues = len(leagues)
+n_history = f"{sum(m['n_history_matches'] for m in metas):,}"
+n_fixtures = f"{sum(len(lt['fixtures']) for lt in leagues):,}"
+season_from = min(m["history_from"] for m in metas)[:4]
+season = metas[0]["season"]
+match_rate = sum(m["n_lined_matches"] for m in metas) / sum(m["n_history_matches"] for m in metas)
+match_pct = f"{match_rate * 100:.1f}"
+
+windows = sorted({m["defaults"]["n_matches"] for m in metas})
+window_txt = f"{windows[0]}" if len(windows) == 1 else f"{windows[0]} to {windows[-1]}"
+odds_wgts = sorted({m["defaults"]["asian_wgt"] for m in metas})
+odds_txt = f"{odds_wgts[0]:.0%}" if len(odds_wgts) == 1 else f"{odds_wgts[0]:.0%} to {odds_wgts[-1]:.0%}"
+n_promotions = sum(m["promotion"]["n"] for m in metas)
+promo_for = sorted((1 - m["promotion"]["for"]) * 100 for m in metas)
+promo_conc = sorted((m["promotion"]["conc"] - 1) * 100 for m in metas)
+ha = sorted(m["HA"] * 100 for m in metas)
+
+
+def pct_range(v):
+    return f"{v[0]:.0f}% to {v[-1]:.0f}%"
+
+
+def fitted_table():
+    rows = [{
+        "League": m["league"],
+        "Window": m["defaults"]["n_matches"],
+        "Goals": m["defaults"]["goals_wgt"], "xG": m["defaults"]["xG_wgt"], "Odds": m["defaults"]["asian_wgt"],
+        "MAE total": m["test_mae"]["total"], "MAE sup": m["test_mae"]["sup"],
+        "Home adv.": f"{m['HA'] * 100:.1f}%", "ρ": m["rho"],
+        "Promotions": m["promotion"]["n"],
+        "Promoted for": f"×{m['promotion']['for']:.2f}", "Promoted against": f"×{m['promotion']['conc']:.2f}",
+    } for m in metas]
+    # One format per column: League, Window, Goals, xG, Odds, MAE x2, Home adv., rho, ...
+    return table(pd.DataFrame(rows), floatfmt=("", "", ".1f", ".1f", ".1f", ".3f", ".3f", "", ".3f", "", "", ""))
 ```
 
 ## 1. Introduction
@@ -39,13 +69,14 @@ and goalkeeping, and on betting lines alone simply copies the market.
 This model blends all three into attack and defence ratings, prices
 every remaining fixture from them, and simulates the rest of the season
 to put odds on the title, the top four, the top six and relegation.
-Every number below is recalculated in your browser as you move the
+It covers the top five European leagues, updates daily, and every
+number in the app is recalculated in your browser as you move the
 sliders.
 :::
 
 ::: stat-row
 ::: stat
-[`{python} meta["league"]`]{.num} [league modelled]{.lbl}
+[`{python} n_leagues`]{.num} [leagues modelled]{.lbl}
 :::
 
 ::: stat
@@ -59,38 +90,55 @@ sliders.
 
 ## 2. The model
 
-Use the sliders to change how many recent matches (up to one season) feed each rating and
-how much weight goals, xG and the betting market get. The odds weight
-fills whatever is left so the three always add up to 1. **Reset to
-optimised** restores the combination that tracked the market most
-closely in past seasons (section 4). Your settings are saved in the
-page link, so you can share a particular set-up with someone.
+Pick a league, then use the sliders to change how many recent matches
+(up to one season) feed each rating and how much weight goals, xG and
+the betting market get. The odds weight fills whatever is left so the
+three always add up to 1. **Reset to optimised** restores the
+combination that tracked that league's market most closely in past
+seasons (section 4). Your league and settings are saved in the page
+link, so you can share a particular set-up with someone.
 
 ```{=html}
 <div id="lt-app"><p class="lt-loading">Loading the model…</p></div>
 <script type="module" src="lt_app/app.js"></script>
 ```
 
-The season is cut off at `{python} meta["as_of"]` with
-`{python} n_results` results played. This is a demonstration snapshot.
-The plan is for it to update daily from the scraped data.
+The data was last updated on `{python} updated`, covering the
+`{python} season.replace("/20", "/")` season so far. Results and
+fixtures are refreshed every day.
 
 ## 3. Data
 
 Two sources are joined match by match:
 
-- **Understat** for each match's goals and expected goals (xG).
+- **Understat** for each match's goals and expected goals (xG), and
+  this season's remaining fixtures. It is scraped fresh for every
+  update, back to the 2015/16 season.
 - **totalcorner.com** for the pre-match Asian handicap and goal line,
-  for both the top flight and the division below.
+  for both the top flight and the division below. These come from the
+  daily scrape that also feeds the [corner model](index.qmd).
   The goal line is solved for the Poisson goals rate that prices it
   fairly, and the handicap for the goal difference that prices it
   fairly under a Skellam model. Together they give the market's expected
   goals for each side, called *Asian goals* here. This is the same
-  odds-to-goals step used in the [corner model](index.qmd).
+  odds-to-goals step used in the corner model.
+
+```{python}
+code_link("code/lt/understat.py", "Understat scrape and team-name matching")
+```
 
 ```{python}
 code_link("code/lt/asian_lines.py", "Odds to expected goals for each side")
 ```
+
+The two sites spell some teams differently (*Manchester City* and
+*Man City*), so Understat names are converted to totalcorner's. A match
+is then joined to its lines by the two teams and a kick-off date within
+two days, since the sites can put a late kick-off either side of
+midnight. `{python} match_pct`% of matches find their lines.
+A match without lines (usually one played in the last day or so, before
+the next scrape) still counts towards its teams' goals and xG
+averages. The odds average skips it.
 
 Matches played behind closed doors (March 2020 to June 2022) are left
 out. Home advantage is close to zero in them, and they would distort
@@ -110,39 +158,44 @@ $$
 where $w_g + w_x + w_o = 1$, and the same for goals, xG and Asian goals
 conceded.
 
-The window and weights were chosen by grid search. For every window from
-5 to 29 matches and every weight combination, each past match was
-predicted using only ratings from before it. The predictions were then
-scored on mean absolute error (MAE) against the market's own total and
-supremacy for that match. Supremacy counted for 75% of the score, since
-this model is mainly for finding supremacy differences. The search used
-seasons up to 2022/23. The winning combination was then scored on
-2023/24 onwards, which the search never saw.
+The window and weights were chosen by grid search, separately for each
+league. For every window from 5 to 29 matches and every weight
+combination, each past match was predicted using only ratings from
+before it. The predictions were then scored on mean absolute error
+(MAE) against the market's own total and supremacy for that match.
+Supremacy counted for 75% of the score, since this model is mainly for
+finding supremacy differences. The search used seasons up to 2022/23.
+The winning combination was then scored on 2023/24 onwards, which the
+search never saw.
 
 ```{python}
 code_link("code/lt/optimise.py#L73-L98", "Grid search: find_optimal_parameters()")
 ```
 
-The best combination was a **`{python} d["n_matches"]`-match window**
-with weights of `{python} w_g` goals, `{python} w_x` xG and
-`{python} w_o` odds. Out of sample, its predictions were off the
-market's by an average of `{python} mae_total` goals on the total and
-`{python} mae_sup` on supremacy. The heavy weight on the odds is
-expected, because the market already contains most of what goals and
-xG say about a team. The small goals and xG weights pick up
-recent performance the lines may not have caught up with yet.
+The leagues agree closely. Every one picked a window of
+`{python} window_txt` matches with `{python} odds_txt` of the weight on
+the odds. The heavy odds weight is expected, because the market already
+contains most of what goals and xG say about a team. The small goals
+and xG weights pick up recent performance the lines may not have caught
+up with yet. The table below gives each league's fitted values. The
+MAE columns are the out-of-sample error against the market, in goals.
+
+```{python}
+fitted_table()
+```
 
 ### Promoted teams
 
 A newly promoted team has few top-flight matches to rate it on, and
 none at all at the start of the season. Its matches from the season it
 won promotion are used instead, with the market's expected goals
-scaled to top-flight level. The scaling comes from the
-`{python} promo["n"]` past promotions in the data. For each one, the
-team's average Asian goals in its first top-flight season are compared
-with its promotion season. On average, promoted teams' expected goals
-scored fell by `{python} promo_for_pct`% and their expected goals
-conceded rose by `{python} promo_conc_pct`%.
+scaled to top-flight level. Each league's scaling comes from its own
+past promotions (`{python} n_promotions` across the five leagues). For
+each one, the team's average Asian goals in its first top-flight season
+are compared with its promotion season. Depending on the league,
+promoted teams' expected goals scored fell by
+`{python} pct_range(promo_for)` and their expected goals conceded rose
+by `{python} pct_range(promo_conc)`.
 
 Only the odds-based metric can be carried over this way, because
 Understat has no second-division goals or xG. Within the window, goals
@@ -169,23 +222,24 @@ $$
 $$
 
 Home advantage is then moved from the away side to the home side. The
-home team gains `{python} ha_pct`% of the match's expected goals and
-the total stays the same. That share is the home-minus-away goal
+home team gains a fixed share of the match's expected goals
+(`{python} f"{ha[0]:.1f}% to {ha[-1]:.1f}%"` depending on the league)
+and the total stays the same. That share is the home-minus-away goal
 difference as a proportion of all goals in the league's non-COVID
 history.
 
 ```{python}
-code_link("code/lt/ratings.py#L70-L80", "Expected goals: predict_goals()")
+code_link("code/lt/ratings.py#L73-L83", "Expected goals: predict_goals()")
 ```
 
 Two independent Poisson distributions turn the expected goals into a
 probability for every scoreline up to 10-10. Independent Poissons
 slightly under-price low-scoring draws, so the Dixon-Coles correction
-reweights 0-0, 0-1, 1-0 and 1-1 using one parameter, ρ. ρ is fitted by
-maximum likelihood on past scorelines, with the market's expected goals
-as the inputs (ρ = `{python} rho`). Adding up the scorelines where the
-home side wins, where it's level, and where the away side wins gives
-the home, draw and away probabilities. Their inverses are the fair
+reweights 0-0, 0-1, 1-0 and 1-1 using one parameter, ρ. ρ is fitted for
+each league by maximum likelihood on past scorelines, with the market's
+expected goals as the inputs. Adding up the scorelines where the home
+side wins, where it's level, and where the away side wins gives the
+home, draw and away probabilities. Their inverses are the fair
 (margin-free) 1X2 odds.
 
 ```{python}
@@ -212,13 +266,10 @@ code_link("code/lt/simulate.py", "Monte Carlo: simulate_season()")
 
 ## 7. Limitations
 
-- **Snapshot data.** This version runs on a fixed Serie A snapshot.
-  By the cut-off, every promoted team has played at least 30 Serie A
-  matches, so on this page the promotion adjustment only shows up with
-  windows of more than 30. It matters most early in a season.
-- **One promotion factor for everyone.** Every promoted team is scaled
-  by the same average factor, whatever its budget or squad changes.
-  After a few top-flight matches the market's own lines take over.
+- **One promotion factor per league.** Every promoted team in a league
+  is scaled by the same average factor, whatever its budget or squad
+  changes. After a few top-flight matches the market's own lines take
+  over.
 - **Squad changes.** The ratings don't react to transfers, injuries,
   suspensions or manager changes until those show up in results and
   prices.
@@ -232,7 +283,8 @@ code_link("code/lt/simulate.py", "Monte Carlo: simulate_season()")
 - **Simplified simulation.** Simulated matches give points only, with
   no goals, so teams level on points are ordered at random instead of by
   goal difference. Ratings are also fixed for the rest of the season and
-  don't update after each simulated result.
+  don't update after each simulated result. Play-offs (the Bundesliga
+  and Ligue 1 relegation play-offs) aren't modelled.
 - **Market fit is one yardstick.** Matching the market on MAE doesn't
   show the model can beat it. The [corner model](index.qmd) goes a step
   further and backtests against Pinnacle prices, which is the natural
@@ -247,5 +299,9 @@ adapted from the original
 The browser version that runs this page is in
 [`lt_app/`](https://github.com/lukechambers999/corner-gamestate/tree/main/lt_app),
 and its outputs are checked against the Python version at the default
-settings. The data snapshot is in
-[`snapshots/lt/`](https://github.com/lukechambers999/corner-gamestate/tree/main/snapshots/lt).
+settings. The daily data snapshot is in
+[`snapshots/lt/`](https://github.com/lukechambers999/corner-gamestate/tree/main/snapshots/lt),
+built by
+[`_build/make_lt_snapshots.py`](https://github.com/lukechambers999/corner-gamestate/blob/main/_build/make_lt_snapshots.py)
+from a scheduled
+[GitHub Action](https://github.com/lukechambers999/corner-gamestate/blob/main/.github/workflows/update_lt_data.yml).

@@ -24,10 +24,15 @@ def season_year(dates):
     return np.where(dates.dt.month >= 8, dates.dt.year, dates.dt.year - 1)
 
 
-# Team-seasons in the second division that were followed by promotion to the top flight
-def find_promotions(team_strength, league_top, league_below):
+# Team-seasons in the second division that were followed by promotion to the top flight.
+# current = (season_year, teams) counts this season's teams as top-flight even before they've played,
+# so promoted teams are found from the first day of the season.
+def find_promotions(team_strength, league_top, league_below, current=None):
     team_season_league = team_strength[['Team', 'season_year', 'League']].drop_duplicates()
     top = team_season_league[team_season_league['League'] == league_top][['Team', 'season_year']]
+    if current is not None:
+        season, teams = current
+        top = pd.concat([top, pd.DataFrame({'Team': list(teams), 'season_year': season})]).drop_duplicates()
     below = team_season_league[team_season_league['League'] == league_below][['Team', 'season_year']]
 
     promoted = top.merge(below.assign(season_year=below['season_year'] + 1), on=['Team', 'season_year'])

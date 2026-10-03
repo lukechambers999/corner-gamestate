@@ -6,14 +6,15 @@ const MAX_GOALS = 11;
 // Team ratings: mean of each metric over the team's most recent n matches, then weighted
 // (code/lt/ratings.py: current_ratings, weighted_ratings). Promoted teams' second-division
 // matches have Asian goals only, so goals and xG average over the matches that have them,
-// and fall back on the Asian average if none do.
+// and fall back on the Asian average if none do. Matches whose betting lines haven't been
+// scraped have no Asian goals; a window with none at all falls back on xG.
 export function teamRatings(teams, n, goalsWgt, xgWgt, asianWgt) {
   const mean = (arr) => {
     const v = arr.slice(0, n).filter((x) => x != null);
     return v.length ? v.reduce((a, b) => a + b, 0) / v.length : null;
   };
   const rows = teams.map((t) => {
-    const af = mean(t.Asian_for), aa = mean(t.Asian_conc);
+    const af = mean(t.Asian_for) ?? mean(t.xG_for), aa = mean(t.Asian_conc) ?? mean(t.xG_conc);
     const m = {
       gf: mean(t.GoalsScored) ?? af, ga: mean(t.GoalsConceded) ?? aa,
       xgf: mean(t.xG_for) ?? af, xga: mean(t.xG_conc) ?? aa,
