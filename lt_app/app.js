@@ -111,9 +111,9 @@ function ratingsTab(c) {
   };
   return el("div", {},
     el("p", { class: "lt-note" },
-      `Attack = expected goals scored per match, defence = expected goals conceded (lower is better), each a weighted average over the team's last ${state.params.n} league matches. League average defence: ${fmt.n(c.ratings.dsAvg, 3)}.` +
+      `Attack = expected goals scored per match, defence = expected goals conceded. Each is a weighted average for the given weights for each metric over the team's last ${state.params.n} league matches.` +
       (c.ratings.rows.some((r) => r.below)
-        ? ` Teams tagged P are recently promoted: that many matches in their window come from the division below, with Asian goals scaled to top-flight level (for × ${state.data.meta.promotion.for}, against × ${state.data.meta.promotion.conc}).`
+        ? " Teams tagged P are newly promoted. The number shows how many matches in their window come from the division below, derived using odds based ratings adjusted to top-flight level."
         : "")),
     table(
       [{ label: "#" }, { label: "Team" }, { label: "Attack", key: "AS", cls: "num" }, { label: "", cls: "barcol" },
@@ -143,8 +143,8 @@ function fixturesTab(c) {
   });
   return el("div", {},
     el("p", { class: "lt-note" },
-      "Expected goals for each side, the match total and supremacy (expected home goal difference), then the 1X2 probabilities and fair decimal odds (1 / probability, no margin)."),
-    table([{ label: "Date" }, { label: "Home" }, { label: "Away" }, { label: "Home xG", cls: "num" }, { label: "Away xG", cls: "num" },
+      "Predicted goals for each side, total match goals and goal supremacy (the difference in predicted goals), the 1X2 probabilities and unmargined decimal odds."),
+    table([{ label: "Date" }, { label: "Home" }, { label: "Away" }, { label: "H xG", cls: "num" }, { label: "A xG", cls: "num" },
            { label: "Total", cls: "num" }, { label: "Sup", cls: "num" }, { label: "H", cls: "num" }, { label: "D", cls: "num" },
            { label: "A", cls: "num" }, { label: "1", cls: "num" }, { label: "X", cls: "num" }, { label: "2", cls: "num" }], rows,
           { scroll: true }),
@@ -155,7 +155,7 @@ function tableTab(c) {
   const curPos = Object.fromEntries(c.current.map((r, i) => [r.team, i + 1]));
   return el("div", {},
     el("p", { class: "lt-note" },
-      `Current points plus the expected points from the ${c.priced.length} remaining fixtures (3 × win probability + draw probability). The arrow shows the change from the current position.`),
+      `Current points plus the expected points from the ${c.priced.length} remaining fixtures. The arrow shows the change from the current position.`),
     table([{ label: "#" }, { label: "Team" }, { label: "W", cls: "num" },
            { label: "D", cls: "num" }, { label: "L", cls: "num" }, { label: "GF", cls: "num" }, { label: "GA", cls: "num" },
            { label: "GD", cls: "num" }, { label: "So far", cls: "num" }, { label: "Pred pts", cls: "num" }],
@@ -273,7 +273,7 @@ function buildControls() {
       ui.reset,
       el("span", { class: "muted small" },
         `Optimised: ${d.n_matches} matches, weights ${d.goals_wgt} / ${d.xG_wgt} / ${d.asian_wgt} (goals / xG / odds), ` +
-        "found by a grid search for the window and weights that best predicted the market's totals and supremacy in past seasons.")));
+        "found by a grid search for the window and weights that best predicted the market's totals and supremacy in previous seasons.")));
 }
 
 function syncControls() {
