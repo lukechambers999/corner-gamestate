@@ -1,9 +1,30 @@
 {
+ "updated": "2026-10-03",
  "leagues": [
+  {
+   "key": "epl",
+   "league": "Premier League",
+   "file": "epl.json"
+  },
+  {
+   "key": "la_liga",
+   "league": "La Liga",
+   "file": "la_liga.json"
+  },
   {
    "key": "serie_a",
    "league": "Serie A",
    "file": "serie_a.json"
+  },
+  {
+   "key": "bundesliga",
+   "league": "Bundesliga",
+   "file": "bundesliga.json"
+  },
+  {
+   "key": "ligue_1",
+   "league": "Ligue 1",
+   "file": "ligue_1.json"
   }
  ]
 }

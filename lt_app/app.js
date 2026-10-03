@@ -8,13 +8,13 @@ const SEED = 1;
 // Code links shown under each tab: [label, path with line range]
 const CODE = {
   ratings: [
-    ["Team performance frame and rolling ratings", "code/lt/ratings.py#L19-L67"],
+    ["Team performance frame and rolling ratings", "code/lt/ratings.py#L19-L70"],
     ["Promoted teams: promotion factors", "code/lt/promotion.py"],
     ["Window and weight grid search", "code/lt/optimise.py#L73-L98"],
-    ["Browser version", "lt_app/model.js#L6-L31"],
+    ["Browser version", "lt_app/model.js#L6-L32"],
   ],
   fixtures: [
-    ["Expected goals with home advantage", "code/lt/ratings.py#L70-L80"],
+    ["Expected goals with home advantage", "code/lt/ratings.py#L73-L83"],
     ["Dixon-Coles scorelines and 1X2", "code/lt/dixon_coles.py#L20-L62"],
     ["Odds-implied (Asian) goals", "code/lt/asian_lines.py"],
   ],
@@ -23,7 +23,7 @@ const CODE = {
   ],
   season: [
     ["Monte Carlo simulation", "code/lt/simulate.py"],
-    ["Browser version", "lt_app/model.js#L140-L182"],
+    ["Browser version", "lt_app/model.js#L141-L183"],
   ],
 };
 
@@ -74,12 +74,13 @@ function readHash() {
   const out = {};
   for (const k of ["n", "g", "x"]) if (h.has(k)) out[k] = parseFloat(h.get(k));
   if (h.has("tab")) out.tab = h.get("tab");
+  if (h.has("lg")) out.lg = h.get("lg");
   return out;
 }
 
 function writeHash() {
   const p = state.params;
-  history.replaceState(null, "", `#n=${p.n}&g=${p.g}&x=${p.x}&tab=${state.tab}`);
+  history.replaceState(null, "", `#lg=${state.data.meta.key}&n=${p.n}&g=${p.g}&x=${p.x}&tab=${state.tab}`);
 }
 
 const round2 = (v) => Math.round(v * 100) / 100;
@@ -313,10 +314,12 @@ function render() {
   panelHost.replaceChildren(fn(compute()));
 }
 
-async function loadLeague(file) {
+// Loads a league's snapshot. Parameters from the link apply on first load only;
+// switching league starts from that league's optimised defaults.
+async function loadLeague(file, fromHash) {
   state.data = await (await fetch(SNAP + file)).json();
   const d = state.data.meta.defaults;
-  const h = readHash();
+  const h = fromHash ? readHash() : {};
   const n = Math.min(state.data.meta.window_max, Math.max(state.data.meta.window_min, h.n ?? d.n_matches));
   const g = round2(Math.min(1, Math.max(0, h.g ?? d.goals_wgt)));
   const x = round2(Math.min(1 - g, Math.max(0, h.x ?? d.xG_wgt)));
@@ -326,36 +329,63 @@ async function loadLeague(file) {
   window.ltCheck = () => checkAgainstPython(state.data);
 }
 
+function subtitle() {
+  const { meta, results, fixtures } = state.data;
+  const last = results.reduce((m, r) => (r.Date > m ? r.Date : m), "");
+  const parts = [
+    meta.season.replace("/20", "/"),
+    results.length ? `${results.length} results to ${fmt.date(last)}` : "no results yet",
+    `${fixtures.length} fixtures remaining`,
+  ];
+  if (state.updated) parts.push(`updated ${fmt.date(state.updated)}`);
+  return parts.join(" · ");
+}
+
+function linesNote() {
+  const n = state.data.meta.n_results_no_lines;
+  return n ? `${n} recent result${n > 1 ? "s have" : " has"} no betting lines yet, so ${n > 1 ? "they count" : "it counts"} for goals and xG only.` : "";
+}
+
 async function init() {
   root = document.getElementById("lt-app");
   if (!root) return;
   try {
     const index = await (await fetch(SNAP + "index.json")).json();
-    await loadLeague(index.leagues[0].file);
+    state.updated = index.updated;
+    const wanted = readHash().lg;
+    const first = index.leagues.find((l) => l.key === wanted) || index.leagues[0];
+    await loadLeague(first.file, true);
 
-    const subtitle = () => {
-      const last = state.data.results.reduce((m, r) => (r.Date > m ? r.Date : m), "");
-      return `${state.data.results.length} results to ${fmt.date(last)} · ${state.data.fixtures.length} fixtures remaining`;
-    };
     const title = el("div", { class: "lt-title" }, state.data.meta.league);
     const sub = el("div", { class: "muted small" }, subtitle());
-    const head = el("div", { class: "lt-head" },
-      el("div", {}, title, sub),
-      index.leagues.length > 1
-        ? el("select", { class: "lt-league", "aria-label": "League", onchange: async (e) => {
-            await loadLeague(e.target.value);
-            title.textContent = state.data.meta.league;
-            sub.textContent = subtitle();
-            controlsHost.replaceChildren(buildControls());
-            render();
-          } }, index.leagues.map((l) => el("option", { value: l.file }, l.league)))
-        : null);
+    const note = el("div", { class: "muted small" }, linesNote());
+    const picker = el("div", { class: "lt-leagues", role: "radiogroup", "aria-label": "League" },
+      index.leagues.map((l) => el("button", {
+        class: "lt-league-btn", role: "radio", "data-key": l.key,
+        onclick: async () => {
+          if (l.key === state.data.meta.key) return;
+          await loadLeague(l.file, false);
+          title.textContent = state.data.meta.league;
+          sub.textContent = subtitle();
+          note.textContent = linesNote();
+          controlsHost.replaceChildren(buildControls());
+          syncPicker();
+          writeHash();
+          render();
+        } }, l.league)));
+    const syncPicker = () => picker.querySelectorAll("button").forEach((b) => {
+      const on = b.dataset.key === state.data.meta.key;
+      b.classList.toggle("active", on);
+      b.setAttribute("aria-checked", on);
+    });
+    syncPicker();
+    const head = el("div", { class: "lt-head" }, el("div", {}, title, sub, note));
 
     controlsHost = el("div", {}, buildControls());
     tabHost = el("div", { class: "lt-tabs", role: "tablist" },
       TABS.map(([k, label]) => el("button", { "data-tab": k, role: "tab", onclick: () => { state.tab = k; writeHash(); render(); } }, label)));
     panelHost = el("div", { class: "lt-panel", role: "tabpanel" });
-    root.replaceChildren(head, controlsHost, tabHost, panelHost);
+    root.replaceChildren(picker, head, controlsHost, tabHost, panelHost);
     render();
   } catch (err) {
     root.replaceChildren(el("p", { class: "lt-empty" }, "The model data couldn't be loaded. " + err.message));
