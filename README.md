@@ -1,4 +1,4 @@
-# Luke Chambers - Data, Modelling and Analytics Portfolio
+# Luke Chambers - Sports Data Portfolio
 
 Source for the site at **https://lukechambers999.github.io/portfolio_2026/**,
 which holds two projects:

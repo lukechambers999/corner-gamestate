@@ -10,7 +10,7 @@ project:
     - snapshots/lt/
 
 website:
-  title: "Luke Chambers - Data, Modelling and Analytics Portfolio"
+  title: "Luke Chambers - Sports Data Portfolio"
   site-url: https://lukechambers999.github.io/portfolio_2026/
   repo-url: https://github.com/lukechambers999/portfolio_2026
   navbar:
